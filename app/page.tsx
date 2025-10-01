@@ -185,10 +185,8 @@ export default function Home() {
     const element = document.getElementById("post-canvas")
     if (!element) return
 
-    const bgColor = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
-
     const canvas = await html2canvas(element, {
-      backgroundColor: bgColor,
+      backgroundColor: null,
       scale: 3,
       logging: false,
       useCORS: true,
