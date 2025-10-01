@@ -46,7 +46,7 @@ const getBackgroundStyle = (background: string) => {
     case "black":
       return { backgroundColor: "#0a0a0a" }
     default:
-      return { backgroundColor: "#181C14" }
+      return { backgroundColor: "#ffffff" }
   }
 }
 
@@ -127,7 +127,7 @@ export function PostCanvas({
             )}
 
             {section.type === "title" && (
-              <div
+              <h1
                 contentEditable
                 suppressContentEditableWarning
                 onFocus={() => setEditingId(section.id)}
@@ -139,15 +139,16 @@ export function PostCanvas({
                 style={{ 
                   fontSize: section.style?.fontSize, 
                   color: textColor,
-                  minHeight: "auto"
+                  margin: 0,
+                  lineHeight: "1.1"
                 }}
               >
                 {section.content}
-              </div>
+              </h1>
             )}
 
             {section.type === "label-box" && (
-              <div
+              <span
                 contentEditable
                 suppressContentEditableWarning
                 onFocus={() => setEditingId(section.id)}
@@ -159,33 +160,34 @@ export function PostCanvas({
                 style={{
                   backgroundColor: section.style?.backgroundColor || "#3B82F6",
                   color: section.style?.textColor || "#FFFFFF",
-                  minHeight: "auto"
+                  lineHeight: "1.5"
                 }}
               >
                 {section.content}
-              </div>
+              </span>
             )}
 
             {section.type === "text-box" && (
-              <div className="flex">
-                <div
-                  contentEditable
-                  suppressContentEditableWarning
-                  onFocus={() => setEditingId(section.id)}
-                  onBlur={(e) => {
-                    setEditingId(null)
-                    onUpdateSection(section.id, e.currentTarget.textContent || "")
-                  }}
-                  className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-1 flex items-center"
-                  style={{ 
-                    borderColor: borderColor, 
-                    color: textColor,
-                    minHeight: "100px"
-                  }}
-                >
-                  {section.content}
-                </div>
-              </div>
+              <p
+                contentEditable
+                suppressContentEditableWarning
+                onFocus={() => setEditingId(section.id)}
+                onBlur={(e) => {
+                  setEditingId(null)
+                  onUpdateSection(section.id, e.currentTarget.textContent || "")
+                }}
+                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                style={{ 
+                  borderColor: borderColor, 
+                  color: textColor,
+                  margin: 0,
+                  minHeight: "100px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                {section.content}
+              </p>
             )}
 
             {section.type === "image" && (
@@ -255,27 +257,22 @@ export function PostCanvas({
             )}
           </div>
         ))}
+        </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Footer */}
-        <div className="flex items-end justify-between">
+        {/* Footer - Always at bottom with guaranteed space */}
+        <div className="flex items-center justify-between pt-4" style={{ minHeight: "60px" }}>
           <div
             contentEditable
             suppressContentEditableWarning
             onBlur={(e) => onUpdateAuthor(e.currentTarget.textContent || "")}
             className="cursor-text text-2xl font-medium outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-md px-2 py-1"
             style={{ 
-              color: isDark ? "#9ca3af" : "#6b7280",
-              minHeight: "36px",
-              display: "flex",
-              alignItems: "center"
+              color: isDark ? "#9ca3af" : "#6b7280"
             }}
           >
             {slide.author}
           </div>
-          <ArrowRight className="h-12 w-12" strokeWidth={2.5} style={{ color: textColor }} />
+          <ArrowRight className="h-12 w-12 flex-shrink-0" strokeWidth={2.5} style={{ color: textColor }} />
         </div>
       </div>
     </div>
