@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Copy, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export interface Section {
   id: string
@@ -245,9 +247,15 @@ export default function Home() {
       {/* Sidebar */}
       <div className="w-80 border-r border-border bg-card p-6 shadow-lg">
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Post Generator</h1>
-            <p className="text-sm text-muted-foreground mt-1">Create stunning carousel posts</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Image src="/web-design.png" alt="Logo" width={40} height={40} className="rounded-md" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Post Generator</h1>
+                <p className="text-sm text-muted-foreground">Create stunning posts</p>
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
 
           {/* Background Selector */}
