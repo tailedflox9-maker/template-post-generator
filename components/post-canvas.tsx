@@ -15,6 +15,8 @@ interface PostCanvasProps {
 
 const getBackgroundStyle = (background: string) => {
   switch (background) {
+    case "dark":
+      return { backgroundColor: "#181C14" }
     case "white":
       return { backgroundColor: "#ffffff" }
     case "cream":
@@ -44,12 +46,12 @@ const getBackgroundStyle = (background: string) => {
     case "black":
       return { backgroundColor: "#0a0a0a" }
     default:
-      return { backgroundColor: "#ffffff" }
+      return { backgroundColor: "#181C14" }
   }
 }
 
 const isDarkBackground = (background: string) => {
-  return ["darkGray", "darkBlue", "black"].includes(background)
+  return ["dark", "darkGray", "darkBlue", "black"].includes(background)
 }
 
 export function PostCanvas({
@@ -136,9 +138,7 @@ export function PostCanvas({
                 style={{ 
                   fontSize: section.style?.fontSize, 
                   color: textColor,
-                  minHeight: "60px",
-                  display: "flex",
-                  alignItems: "center"
+                  minHeight: "auto"
                 }}
               >
                 {section.content}
@@ -158,10 +158,7 @@ export function PostCanvas({
                 style={{
                   backgroundColor: section.style?.backgroundColor || "#3B82F6",
                   color: section.style?.textColor || "#FFFFFF",
-                  minHeight: "48px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  minHeight: "auto"
                 }}
               >
                 {section.content}
@@ -169,34 +166,40 @@ export function PostCanvas({
             )}
 
             {section.type === "text-box" && (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                onFocus={() => setEditingId(section.id)}
-                onBlur={(e) => {
-                  setEditingId(null)
-                  onUpdateSection(section.id, e.currentTarget.textContent || "")
-                }}
-                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center"
-                style={{ 
-                  borderColor: borderColor, 
-                  color: textColor,
-                  minHeight: "100px"
-                }}
-              >
-                {section.content}
+              <div className="flex">
+                <div
+                  contentEditable
+                  suppressContentEditableWarning
+                  onFocus={() => setEditingId(section.id)}
+                  onBlur={(e) => {
+                    setEditingId(null)
+                    onUpdateSection(section.id, e.currentTarget.textContent || "")
+                  }}
+                  className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-1 flex items-center"
+                  style={{ 
+                    borderColor: borderColor, 
+                    color: textColor,
+                    minHeight: "100px"
+                  }}
+                >
+                  {section.content}
+                </div>
               </div>
             )}
 
             {section.type === "image" && (
-              <div className="relative">
+              <div className="relative flex justify-center">
                 {section.content ? (
                   <div className="relative group/image">
                     <img
                       src={section.content || "/placeholder.svg"}
                       alt="Uploaded content"
-                      className="max-h-80 w-full rounded-lg object-contain"
-                      style={{ imageRendering: "high-quality" }}
+                      className="max-h-64 max-w-full rounded-lg object-contain"
+                      style={{ 
+                        imageRendering: "high-quality",
+                        width: "auto",
+                        height: "auto"
+                      }}
                     />
                     <Button
                       size="sm"
@@ -212,7 +215,7 @@ export function PostCanvas({
                   </div>
                 ) : (
                   <div
-                    className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    className="flex h-40 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-all hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950 w-full"
                     style={{
                       borderColor: isDark ? "#4b5563" : "#d1d5db",
                       backgroundColor: isDark ? "#374151" : "#f9fafb",
