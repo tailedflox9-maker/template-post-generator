@@ -168,26 +168,32 @@ export function PostCanvas({
             )}
 
             {section.type === "text-box" && (
-              <p
-                contentEditable
-                suppressContentEditableWarning
-                onFocus={() => setEditingId(section.id)}
-                onBlur={(e) => {
-                  setEditingId(null)
-                  onUpdateSection(section.id, e.currentTarget.textContent || "")
-                }}
-                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                style={{ 
-                  borderColor: borderColor, 
+              <div
+                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2"
+                style={{
+                  borderColor: borderColor,
                   color: textColor,
-                  margin: 0,
                   minHeight: "100px",
                   display: "flex",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
               >
-                {section.content}
-              </p>
+                <p
+                  contentEditable
+                  suppressContentEditableWarning
+                  onFocus={() => setEditingId(section.id)}
+                  onBlur={(e) => {
+                    setEditingId(null)
+                    onUpdateSection(section.id, e.currentTarget.textContent || "")
+                  }}
+                  className="w-full outline-none"
+                  style={{
+                    margin: 0,
+                  }}
+                >
+                  {section.content}
+                </p>
+              </div>
             )}
 
             {section.type === "image" && (
