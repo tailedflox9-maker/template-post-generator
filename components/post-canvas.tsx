@@ -86,6 +86,7 @@ export function PostCanvas({
     >
       {/* Sections */}
       <div className="flex h-full flex-col gap-6">
+        <div className="flex-1 flex flex-col gap-6">
         {slide.sections.map((section, index) => (
           <div key={section.id} className="group relative">
             {editingId !== section.id && (
