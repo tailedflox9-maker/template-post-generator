@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, CSSProperties } from "react"
 import type { Slide } from "@/app/page"
 import { ArrowRight, X, ChevronUp, ChevronDown, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,39 +13,45 @@ interface PostCanvasProps {
   onMoveSection: (sectionId: string, direction: "up" | "down") => void
 }
 
-const getBackgroundStyle = (background: string) => {
+const getBackgroundStyle = (background: string): CSSProperties => {
+  const baseStyle: CSSProperties = {}
+  
   switch (background) {
     case "white":
-      return { backgroundColor: "#ffffff" }
+      baseStyle.backgroundColor = "#ffffff"
+      break
     case "cream":
-      return { backgroundColor: "#fef9f3" }
+      baseStyle.backgroundColor = "#fef9f3"
+      break
     case "lightGray":
-      return { backgroundColor: "#f5f5f5" }
+      baseStyle.backgroundColor = "#f5f5f5"
+      break
     case "lightBlue":
-      return { backgroundColor: "#eff6ff" }
+      baseStyle.backgroundColor = "#eff6ff"
+      break
     case "grainy":
-      return {
-        backgroundColor: "#f8f8f8",
-        backgroundImage: `
-          repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px),
-          repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px)
-        `,
-      }
+      baseStyle.backgroundColor = "#f8f8f8"
+      baseStyle.backgroundImage = "repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px), repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px)"
+      break
     case "dots":
-      return {
-        backgroundColor: "#fafafa",
-        backgroundImage: `radial-gradient(circle at center, rgba(0,0,0,0.08) 1px, transparent 1px)`,
-        backgroundSize: "20px 20px",
-      }
+      baseStyle.backgroundColor = "#fafafa"
+      baseStyle.backgroundImage = "radial-gradient(circle at center, rgba(0,0,0,0.08) 1px, transparent 1px)"
+      baseStyle.backgroundSize = "20px 20px"
+      break
     case "darkGray":
-      return { backgroundColor: "#1f2937" }
+      baseStyle.backgroundColor = "#1f2937"
+      break
     case "darkBlue":
-      return { backgroundColor: "#1e3a8a" }
+      baseStyle.backgroundColor = "#1e3a8a"
+      break
     case "black":
-      return { backgroundColor: "#0a0a0a" }
+      baseStyle.backgroundColor = "#0a0a0a"
+      break
     default:
-      return { backgroundColor: "#ffffff" }
+      baseStyle.backgroundColor = "#ffffff"
   }
+  
+  return baseStyle
 }
 
 const isDarkBackground = (background: string) => {
@@ -76,13 +82,26 @@ export function PostCanvas({
     reader.readAsDataURL(file)
   }
 
+  const titleStyle: CSSProperties = {
+    color: textColor,
+  }
+
+  const labelBoxStyle = (section: any): CSSProperties => ({
+    backgroundColor: section.style?.backgroundColor || "#3B82F6",
+    color: section.style?.textColor || "#FFFFFF",
+  })
+
+  const textBoxStyle: CSSProperties = {
+    borderColor: borderColor,
+    color: textColor,
+  }
+
   return (
     <div
       id="post-canvas"
-      className="relative aspect-square w-full rounded-lg border-2 border-border p-12 shadow-lg"
+      className="relative aspect-square w-full rounded-lg border-2 border-gray-300 p-12 shadow-xl bg-white"
       style={getBackgroundStyle(slide.background)}
     >
-      {/* Sections */}
       <div className="flex h-full flex-col gap-6">
         {slide.sections.map((section, index) => (
           <div key={section.id} className="group relative">
@@ -111,7 +130,6 @@ export function PostCanvas({
               </div>
             )}
 
-            {/* Delete button */}
             {editingId !== section.id && section.type !== "title" && (
               <Button
                 size="icon"
@@ -133,7 +151,7 @@ export function PostCanvas({
                   onUpdateSection(section.id, e.currentTarget.textContent || "")
                 }}
                 className="cursor-text text-balance text-5xl font-bold leading-tight outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ fontSize: section.style?.fontSize, color: textColor }}
+                style={titleStyle}
               >
                 {section.content}
               </div>
@@ -149,10 +167,7 @@ export function PostCanvas({
                   onUpdateSection(section.id, e.currentTarget.textContent || "")
                 }}
                 className="inline-block cursor-text rounded-md px-6 py-3 text-xl font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                style={{
-                  backgroundColor: section.style?.backgroundColor || "#3B82F6",
-                  color: section.style?.textColor || "#FFFFFF",
-                }}
+                style={labelBoxStyle(section)}
               >
                 {section.content}
               </div>
@@ -167,8 +182,8 @@ export function PostCanvas({
                   setEditingId(null)
                   onUpdateSection(section.id, e.currentTarget.textContent || "")
                 }}
-                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ borderColor: borderColor, color: textColor }}
+                className="cursor-text rounded-lg border-2 p-6 text-lg leading-relaxed outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-start"
+                style={textBoxStyle}
               >
                 {section.content}
               </div>
@@ -178,9 +193,9 @@ export function PostCanvas({
               <div className="relative">
                 {section.content ? (
                   <img
-                    src={section.content || "/placeholder.svg"}
+                    src={section.content}
                     alt="Uploaded content"
-                    className="max-h-64 w-auto rounded-lg object-contain"
+                    className="max-h-64 w-full rounded-lg object-contain"
                   />
                 ) : (
                   <div
@@ -220,10 +235,8 @@ export function PostCanvas({
           </div>
         ))}
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Footer */}
         <div className="flex items-end justify-between">
           <div
             contentEditable
