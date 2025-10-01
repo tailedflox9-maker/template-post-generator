@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Trash2, Copy } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export interface Section {
@@ -181,47 +181,15 @@ export default function Home() {
   }
 
   const exportSlide = async () => {
-    const html2canvas = (await import("html2canvas")).default
-    const element = document.getElementById("post-canvas")
-    if (!element) return
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const element = document.getElementById("post-canvas")
+      if (!element) {
+        alert("Canvas not found")
+        return
+      }
 
-    const bgColor = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
-
-    const canvas = await html2canvas(element, {
-      backgroundColor: bgColor,
-      scale: 3,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      width: 1080,
-      height: 1080,
-      windowWidth: 1080,
-      windowHeight: 1080,
-    })
-
-    const link = document.createElement("a")
-    link.download = `slide-${currentSlideIndex + 1}.png`
-    link.href = canvas.toDataURL("image/png", 1.0)
-    link.click()
-  }
-
-  const exportAllAsPDF = async () => {
-    const html2canvas = (await import("html2canvas")).default
-    const jsPDF = (await import("jspdf")).default
-    const element = document.getElementById("post-canvas")
-    if (!element) return
-
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [1080, 1080],
-    })
-
-    for (let i = 0; i < slides.length; i++) {
-      setCurrentSlideIndex(i)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const bgColor = BACKGROUNDS[slides[i].background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
+      const bgColor = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
 
       const canvas = await html2canvas(element, {
         backgroundColor: bgColor,
@@ -229,142 +197,167 @@ export default function Home() {
         logging: false,
         useCORS: true,
         allowTaint: true,
-        width: 1080,
-        height: 1080,
-        windowWidth: 1080,
-        windowHeight: 1080,
       })
 
-      const imgData = canvas.toDataURL("image/png", 1.0)
-      if (i > 0) pdf.addPage()
-      pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement("a")
+          link.download = `slide-${currentSlideIndex + 1}.png`
+          link.href = url
+          link.click()
+          URL.revokeObjectURL(url)
+        }
+      }, "image/png")
+    } catch (error) {
+      console.error("Export failed:", error)
+      alert("Export failed. Please try again.")
     }
+  }
 
-    pdf.save("carousel-post.pdf")
+  const exportAllAsPDF = async () => {
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const jsPDF = (await import("jspdf")).default
+      const element = document.getElementById("post-canvas")
+      if (!element) {
+        alert("Canvas not found")
+        return
+      }
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [1080, 1080],
+      })
+
+      for (let i = 0; i < slides.length; i++) {
+        setCurrentSlideIndex(i)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const bgColor = BACKGROUNDS[slides[i].background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
+
+        const canvas = await html2canvas(element, {
+          backgroundColor: bgColor,
+          scale: 3,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+        })
+
+        const imgData = canvas.toDataURL("image/png")
+        if (i > 0) pdf.addPage()
+        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+      }
+
+      pdf.save("carousel-post.pdf")
+    } catch (error) {
+      console.error("PDF export failed:", error)
+      alert("PDF export failed. Please try again.")
+    }
   }
 
   return (
-    <div className="flex h-screen flex-col bg-slate-900 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="border-b border-slate-700 bg-slate-800 px-6 py-3">
-        <div className="flex items-center justify-between">
+      <header className="border-b border-blue-200 bg-white/80 backdrop-blur-sm px-6 py-4 shadow-sm">
+        <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-slate-100">Post Generator</h1>
-            <p className="text-xs text-slate-400">Click any text to edit</p>
+            <h1 className="text-2xl font-bold text-gray-800">Post Generator</h1>
+            <p className="text-sm text-gray-600">Click any text to edit</p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={exportSlide} variant="outline" size="sm" className="bg-slate-700 border-slate-600 hover:bg-slate-600">
-              <Download className="mr-2 h-3.5 w-3.5" />
-              PNG
+          <div className="flex gap-3">
+            <Button onClick={exportSlide} variant="outline" className="shadow-sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export PNG
             </Button>
-            <Button onClick={exportAllAsPDF} size="sm" className="bg-blue-600 hover:bg-blue-700">
-              <Download className="mr-2 h-3.5 w-3.5" />
-              PDF All
+            <Button onClick={exportAllAsPDF} className="bg-blue-600 hover:bg-blue-700 shadow-sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export PDF
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content - Two Column Layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Controls */}
-        <div className="w-64 border-r border-slate-700 bg-slate-800 p-4 overflow-y-auto">
-          <div className="space-y-4">
-            {/* Background Selection */}
-            <div>
-              <label className="text-xs font-medium text-slate-300 mb-2 block">Background</label>
-              <Select value={currentSlide.background} onValueChange={updateBackground}>
-                <SelectTrigger className="w-full bg-slate-700 border-slate-600">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
-                    <SelectItem key={key} value={key}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Add Elements */}
-            <div>
-              <label className="text-xs font-medium text-slate-300 mb-2 block">Add Elements</label>
-              <div className="space-y-2">
-                <Button onClick={() => addSection("label-box")} variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 hover:bg-slate-600">
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  Label
-                </Button>
-                <Button onClick={() => addSection("text-box")} variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 hover:bg-slate-600">
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  Text Box
-                </Button>
-                <Button onClick={() => addSection("image")} variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 hover:bg-slate-600">
-                  <ImageIcon className="mr-2 h-3.5 w-3.5" />
-                  Image
-                </Button>
-              </div>
-            </div>
-
-            {/* Slide Management */}
-            <div>
-              <label className="text-xs font-medium text-slate-300 mb-2 block">Slides</label>
-              <div className="space-y-2">
-                <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 hover:bg-slate-600">
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  New Slide
-                </Button>
-                <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 hover:bg-slate-600">
-                  <Copy className="mr-2 h-3.5 w-3.5" />
-                  Duplicate
-                </Button>
-                {slides.length > 1 && (
-                  <Button onClick={deleteSlide} variant="outline" size="sm" className="w-full justify-start bg-red-900/50 border-red-800 hover:bg-red-900">
-                    <Trash2 className="mr-2 h-3.5 w-3.5" />
-                    Delete Slide
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* Main Content */}
+      <div className="flex flex-col items-center justify-center gap-8 p-8">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">Background:</span>
+          <Select value={currentSlide.background} onValueChange={updateBackground}>
+            <SelectTrigger className="w-[180px] bg-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
+                <SelectItem key={key} value={key}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Center - Canvas */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-900 overflow-auto">
-          <div className="w-full max-w-2xl">
-            <PostCanvas
-              slide={currentSlide}
-              onUpdateSection={updateSection}
-              onUpdateAuthor={updateAuthor}
-              onDeleteSection={deleteSection}
-              onMoveSection={moveSection}
-            />
-          </div>
+        <div className="w-full max-w-2xl">
+          <PostCanvas
+            slide={currentSlide}
+            onUpdateSection={updateSection}
+            onUpdateAuthor={updateAuthor}
+            onDeleteSection={deleteSection}
+            onMoveSection={moveSection}
+          />
+        </div>
 
-          {/* Navigation */}
-          <div className="mt-6 flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
-              disabled={currentSlideIndex === 0}
-              className="bg-slate-700 border-slate-600 hover:bg-slate-600 disabled:opacity-30"
-            >
-              <ChevronLeft className="h-4 w-4" />
+        {/* Navigation */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
+            disabled={currentSlideIndex === 0}
+            className="bg-white"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium text-gray-700 min-w-[100px] text-center">
+            Slide {currentSlideIndex + 1} of {slides.length}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
+            disabled={currentSlideIndex === slides.length - 1}
+            className="bg-white"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button onClick={() => addSection("label-box")} variant="outline" className="bg-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Label
+          </Button>
+          <Button onClick={() => addSection("text-box")} variant="outline" className="bg-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Text
+          </Button>
+          <Button onClick={() => addSection("image")} variant="outline" className="bg-white">
+            <ImageIcon className="mr-2 h-4 w-4" />
+            Add Image
+          </Button>
+          <Button onClick={addSlide} variant="outline" className="bg-white">
+            <Plus className="mr-2 h-4 w-4" />
+            New Slide
+          </Button>
+          <Button onClick={duplicateSlide} variant="outline" className="bg-white">
+            Duplicate Slide
+          </Button>
+          {slides.length > 1 && (
+            <Button onClick={deleteSlide} variant="outline" className="bg-white">
+              Delete Slide
             </Button>
-            <span className="text-sm text-slate-300 min-w-[100px] text-center">
-              {currentSlideIndex + 1} / {slides.length}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
-              disabled={currentSlideIndex === slides.length - 1}
-              className="bg-slate-700 border-slate-600 hover:bg-slate-600 disabled:opacity-30"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
     </div>
