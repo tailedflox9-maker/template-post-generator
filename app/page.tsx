@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useTheme } from "next-themes"
 import { PostCanvas } from "@/components/post-canvas"
@@ -71,6 +71,47 @@ export default function Home() {
 
   const currentSlide = slides[currentSlideIndex]
 
+  // Effect to sync canvas background with the app theme
+  useEffect(() => {
+    if (theme) {
+      const newBackground = theme === "dark" ? "darkGray" : "white"
+
+      setSlides((prevSlides) => {
+        const slideToUpdate = prevSlides[currentSlideIndex]
+        if (!slideToUpdate) return prevSlides
+
+        // Only update if the current background doesn't match the new theme's default
+        const isCurrentBgDark = BACKGROUNDS[slideToUpdate.background as keyof typeof BACKGROUNDS]?.isDark
+        const shouldUpdateToDark = theme === "dark" && !isCurrentBgDark
+        const shouldUpdateToLight = theme === "light" && isCurrentBgDark
+
+        if (!shouldUpdateToDark && !shouldUpdateToLight) {
+          return prevSlides // No update needed, avoids loops
+        }
+
+        const isDark = BACKGROUNDS[newBackground as keyof typeof BACKGROUNDS]?.isDark
+        const newLabelColor = isDark ? "#10b981" : "#3B82F6"
+
+        const updatedSections = slideToUpdate.sections.map((section) => {
+          if (section.type === "label-box") {
+            return {
+              ...section,
+              style: {
+                ...section.style,
+                backgroundColor: newLabelColor,
+                textColor: "#FFFFFF",
+              },
+            }
+          }
+          return section
+        })
+
+        const updatedSlide = { ...slideToUpdate, background: newBackground, sections: updatedSections }
+        return prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s))
+      })
+    }
+  }, [theme, currentSlideIndex])
+
   const updateSection = (sectionId: string, content: string) => {
     const updatedSlide = {
       ...currentSlide,
@@ -123,37 +164,29 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const updateBackground = useCallback(
-    (background: string) => {
+  // This function is for manual background changes from the dropdown
+  const updateBackground = (background: string) => {
+    setSlides((prevSlides) => {
+      const slideToUpdate = prevSlides[currentSlideIndex]
+      if (!slideToUpdate) return prevSlides
+
       const isDark = BACKGROUNDS[background as keyof typeof BACKGROUNDS]?.isDark
       const newLabelColor = isDark ? "#10b981" : "#3B82F6"
 
-      const updatedSections = currentSlide.sections.map((section) => {
+      const updatedSections = slideToUpdate.sections.map((section) => {
         if (section.type === "label-box") {
           return {
             ...section,
-            style: {
-              ...section.style,
-              backgroundColor: newLabelColor,
-              textColor: "#FFFFFF",
-            },
+            style: { ...section.style, backgroundColor: newLabelColor, textColor: "#FFFFFF" },
           }
         }
         return section
       })
 
-      const updatedSlide = { ...currentSlide, background, sections: updatedSections }
-      setSlides((prevSlides) => prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
-    },
-    [currentSlide, currentSlideIndex],
-  )
-
-  useEffect(() => {
-    if (theme) {
-      const newBackground = theme === "dark" ? "darkGray" : "white"
-      updateBackground(newBackground)
-    }
-  }, [theme, updateBackground])
+      const updatedSlide = { ...slideToUpdate, background, sections: updatedSections }
+      return prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s))
+    })
+  }
 
   const addSlide = () => {
     const newSlide: Slide = {
@@ -273,7 +306,7 @@ export default function Home() {
           {/* Background Selector */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Background Style</label>
-            <Select value={currentSlide.background} onValueChange={updateBackground}>
+            <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -379,13 +412,15 @@ export default function Home() {
         {/* Canvas */}
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="w-full max-w-2xl">
-            <PostCanvas
-              slide={currentSlide}
-              onUpdateSection={updateSection}
-              onUpdateAuthor={updateAuthor}
-              onDeleteSection={deleteSection}
-              onMoveSection={moveSection}
-            />
+            {currentSlide && (
+              <PostCanvas
+                slide={currentSlide}
+                onUpdateSection={updateSection}
+                onUpdateAuthor={updateAuthor}
+                onDeleteSection={deleteSection}
+                onMoveSection={moveSection}
+              />
+            )}
           </div>
         </div>
       </div>
