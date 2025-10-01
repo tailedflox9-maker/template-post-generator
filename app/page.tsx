@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
+import { useTheme } from "next-themes"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Copy, Trash2 } from "lucide-react"
@@ -27,15 +28,15 @@ export interface Slide {
 }
 
 const BACKGROUNDS = {
+  darkGray: { name: "Dark Gray", value: "#1f2937", isDark: true },
   dark: { name: "Dark Theme", value: "#181C14", isDark: true },
+  black: { name: "Black", value: "#0a0a0a", isDark: true },
+  darkBlue: { name: "Dark Blue", value: "#1e3a8a", isDark: true },
   white: { name: "Clean White", value: "#ffffff", isDark: false },
   cream: { name: "Warm Cream", value: "#fef9f3", isDark: false },
   lightGray: { name: "Light Gray", value: "#f5f5f5", isDark: false },
   grainy: { name: "Grainy Texture", value: "#f8f8f8", isDark: false },
   dots: { name: "Subtle Dots", value: "#fafafa", isDark: false },
-  darkGray: { name: "Dark Gray", value: "#1f2937", isDark: true },
-  darkBlue: { name: "Dark Blue", value: "#1e3a8a", isDark: true },
-  black: { name: "Black", value: "#0a0a0a", isDark: true },
 }
 
 export default function Home() {
@@ -66,6 +67,7 @@ export default function Home() {
     },
   ])
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const { theme } = useTheme()
 
   const currentSlide = slides[currentSlideIndex]
 
@@ -121,27 +123,37 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const updateBackground = (background: string) => {
-    const isDark = BACKGROUNDS[background as keyof typeof BACKGROUNDS]?.isDark
-    const newLabelColor = isDark ? "#10b981" : "#3B82F6"
+  const updateBackground = useCallback(
+    (background: string) => {
+      const isDark = BACKGROUNDS[background as keyof typeof BACKGROUNDS]?.isDark
+      const newLabelColor = isDark ? "#10b981" : "#3B82F6"
 
-    const updatedSections = currentSlide.sections.map((section) => {
-      if (section.type === "label-box") {
-        return {
-          ...section,
-          style: {
-            ...section.style,
-            backgroundColor: newLabelColor,
-            textColor: "#FFFFFF",
-          },
+      const updatedSections = currentSlide.sections.map((section) => {
+        if (section.type === "label-box") {
+          return {
+            ...section,
+            style: {
+              ...section.style,
+              backgroundColor: newLabelColor,
+              textColor: "#FFFFFF",
+            },
+          }
         }
-      }
-      return section
-    })
+        return section
+      })
 
-    const updatedSlide = { ...currentSlide, background, sections: updatedSections }
-    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
-  }
+      const updatedSlide = { ...currentSlide, background, sections: updatedSections }
+      setSlides((prevSlides) => prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+    },
+    [currentSlide, currentSlideIndex],
+  )
+
+  useEffect(() => {
+    if (theme) {
+      const newBackground = theme === "dark" ? "darkGray" : "white"
+      updateBackground(newBackground)
+    }
+  }, [theme, updateBackground])
 
   const addSlide = () => {
     const newSlide: Slide = {
