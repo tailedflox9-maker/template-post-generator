@@ -25,6 +25,7 @@ export interface Slide {
 }
 
 const BACKGROUNDS = {
+  dark: { name: "Dark Theme", value: "#181C14", isDark: true },
   white: { name: "Clean White", value: "#ffffff", isDark: false },
   cream: { name: "Warm Cream", value: "#fef9f3", isDark: false },
   lightGray: { name: "Light Gray", value: "#f5f5f5", isDark: false },
@@ -222,10 +223,8 @@ export default function Home() {
       setCurrentSlideIndex(i)
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      const bgColor = BACKGROUNDS[slides[i].background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
-
       const canvas = await html2canvas(element, {
-        backgroundColor: bgColor,
+        backgroundColor: null,
         scale: 3,
         logging: false,
         useCORS: true,
