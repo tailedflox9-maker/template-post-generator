@@ -1,7 +1,7 @@
 // FILE: app/page.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,12 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
   ChevronLeft,
   ChevronRight,
@@ -30,10 +25,11 @@ import {
   ImageIcon,
   Copy,
   Trash2,
-  Sparkles,
   Type,
   Tag,
   Eraser,
+  Loader2,
+  PenSquare,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -65,38 +61,69 @@ const BACKGROUNDS = {
   dots: { name: "Subtle Dots", value: "#fafafa", isDark: false },
 }
 
+const defaultSlides: Slide[] = [
+  {
+    id: "1",
+    sections: [
+      {
+        id: "1",
+        type: "title",
+        content: "YOUR POST TITLE HERE",
+        style: { fontSize: "48px" },
+      },
+      {
+        id: "2",
+        type: "label-box",
+        content: "Section Label",
+        style: { backgroundColor: "#10b981", textColor: "#FFFFFF" },
+      },
+      {
+        id: "3",
+        type: "text-box",
+        content: "Add your main content here. Click to edit any text.",
+      },
+    ],
+    author: "Your Name",
+    background: "white",
+  },
+]
+
 export default function Home() {
-  const [slides, setSlides] = useState<Slide[]>([
-    {
-      id: "1",
-      sections: [
-        {
-          id: "1",
-          type: "title",
-          content: "YOUR POST TITLE HERE",
-          style: { fontSize: "48px" },
-        },
-        {
-          id: "2",
-          type: "label-box",
-          content: "Section Label",
-          style: { backgroundColor: "#3B82F6", textColor: "#FFFFFF" },
-        },
-        {
-          id: "3",
-          type: "text-box",
-          content: "Add your main content here. Click to edit any text.",
-        },
-      ],
-      author: "Your Name",
-      background: "white",
-    },
-  ])
+  const [slides, setSlides] = useState<Slide[]>(defaultSlides)
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const [isClient, setIsClient] = useState(false)
+  const [isExportingPNG, setIsExportingPNG] = useState(false)
+  const [isExportingPDF, setIsExportingPDF] = useState(false)
+
+  // Load state from local storage on component mount
+  useEffect(() => {
+    setIsClient(true)
+    try {
+      const savedState = localStorage.getItem("postGeneratorState")
+      if (savedState) {
+        const { slides: savedSlides, currentSlideIndex: savedIndex } = JSON.parse(savedState)
+        if (savedSlides && typeof savedIndex === 'number') {
+          setSlides(savedSlides)
+          setCurrentSlideIndex(savedIndex)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load state from local storage", error)
+      setSlides(defaultSlides)
+      setCurrentSlideIndex(0)
+    }
+  }, [])
+
+  // Save state to local storage whenever it changes
+  useEffect(() => {
+    if (isClient) {
+      const stateToSave = JSON.stringify({ slides, currentSlideIndex })
+      localStorage.setItem("postGeneratorState", stateToSave)
+    }
+  }, [slides, currentSlideIndex, isClient])
 
   const currentSlide = slides[currentSlideIndex]
 
-  // All your original functions (updateSection, addSlide, etc.) are preserved here...
   const updateSection = (sectionId: string, content: string) => {
     const updatedSlide = {
       ...currentSlide,
@@ -115,29 +142,23 @@ export default function Home() {
     if ((direction === "up" && index === 0) || (direction === "down" && index === currentSlide.sections.length - 1)) {
       return
     }
-
     const newSections = [...currentSlide.sections]
     const targetIndex = direction === "up" ? index - 1 : index + 1
     ;[newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]]
-
     const updatedSlide = { ...currentSlide, sections: newSections }
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
   const addSection = (type: Section["type"]) => {
     const isDark = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.isDark
-    const labelColor = isDark ? "#10b981" : "#3B82F6"
-
+    const labelColor = isDark ? "#34d399" : "#10b981"
     const newSection: Section = {
       id: Date.now().toString(),
       type,
       content: type === "label-box" ? "New Label" : type === "image" ? "" : "New content here",
       style: type === "label-box" ? { backgroundColor: labelColor, textColor: "#FFFFFF" } : {},
     }
-    const updatedSlide = {
-      ...currentSlide,
-      sections: [...currentSlide.sections, newSection],
-    }
+    const updatedSlide = { ...currentSlide, sections: [...currentSlide.sections, newSection] }
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
@@ -153,20 +174,14 @@ export default function Home() {
     setSlides((prevSlides) => {
       const slideToUpdate = prevSlides[currentSlideIndex]
       if (!slideToUpdate) return prevSlides
-
       const isDark = BACKGROUNDS[background as keyof typeof BACKGROUNDS]?.isDark
-      const newLabelColor = isDark ? "#10b981" : "#3B82F6"
-
+      const newLabelColor = isDark ? "#34d399" : "#10b981"
       const updatedSections = slideToUpdate.sections.map((section) => {
         if (section.type === "label-box") {
-          return {
-            ...section,
-            style: { ...section.style, backgroundColor: newLabelColor, textColor: "#FFFFFF" },
-          }
+          return { ...section, style: { ...section.style, backgroundColor: newLabelColor, textColor: "#FFFFFF" } }
         }
         return section
       })
-
       const updatedSlide = { ...slideToUpdate, background, sections: updatedSections }
       return prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s))
     })
@@ -175,14 +190,7 @@ export default function Home() {
   const addSlide = () => {
     const newSlide: Slide = {
       id: Date.now().toString(),
-      sections: [
-        {
-          id: Date.now().toString(),
-          type: "title",
-          content: "NEW SLIDE TITLE",
-          style: { fontSize: "48px" },
-        },
-      ],
+      sections: [{ id: Date.now().toString(), type: "title", content: "NEW SLIDE TITLE", style: { fontSize: "48px" } }],
       author: currentSlide.author,
       background: "white",
     }
@@ -194,10 +202,7 @@ export default function Home() {
     const duplicated: Slide = {
       ...currentSlide,
       id: Date.now().toString(),
-      sections: currentSlide.sections.map((s) => ({
-        ...s,
-        id: Date.now().toString() + Math.random(),
-      })),
+      sections: currentSlide.sections.map((s) => ({ ...s, id: Date.now().toString() + Math.random() })),
     }
     const newSlides = [...slides]
     newSlides.splice(currentSlideIndex + 1, 0, duplicated)
@@ -213,236 +218,147 @@ export default function Home() {
   }
 
   const clearSlide = () => {
-    const updatedSlide = {
-      ...currentSlide,
-      sections: currentSlide.sections.filter((s) => s.type === "title"), // Keep only the title
-    }
+    const updatedSlide = { ...currentSlide, sections: currentSlide.sections.filter((s) => s.type === "title") }
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
   const exportSlide = async () => {
-    const { default: html2canvas } = await import("html2canvas")
-    const element = document.getElementById("post-canvas")
-    if (!element) return
-
-    const canvas = await html2canvas(element, {
-      backgroundColor: null,
-      scale: 3,
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-      imageTimeout: 0,
-      removeContainer: true,
-    })
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const link = document.createElement("a")
-        link.download = `slide-${currentSlideIndex + 1}.png`
-        link.href = URL.createObjectURL(blob)
-        link.click()
-        URL.revokeObjectURL(link.href)
-      }
-    }, "image/png", 1.0)
-  }
-
-  // FIX: This function is now corrected to properly handle state updates.
-  const exportAllAsPDF = async () => {
-    const { default: html2canvas } = await import("html2canvas")
-    const { default: jsPDF } = await import("jspdf")
-    const element = document.getElementById("post-canvas")
-    if (!element) return
-
-    const originalIndex = currentSlideIndex
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: [1080, 1080],
-    })
-
-    for (let i = 0; i < slides.length; i++) {
-      setCurrentSlideIndex(i)
-      // This promise ensures React has time to re-render the canvas with the new slide's content
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
+    setIsExportingPNG(true)
+    try {
+      const { default: html2canvas } = await import("html2canvas")
+      const element = document.getElementById("post-canvas")
+      if (!element) return
       const canvas = await html2canvas(element, {
         backgroundColor: null,
         scale: 3,
-        logging: false,
         useCORS: true,
         allowTaint: true,
-        imageTimeout: 0,
       })
-
-      const imgData = canvas.toDataURL("image/png", 1.0)
-      if (i > 0) pdf.addPage([1080, 1080], "portrait")
-      pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const link = document.createElement("a")
+          link.download = `slide-${currentSlideIndex + 1}.png`
+          link.href = URL.createObjectURL(blob)
+          link.click()
+          URL.revokeObjectURL(link.href)
+        }
+      }, "image/png", 1.0)
+    } catch (error) {
+      console.error("Failed to export PNG:", error)
+    } finally {
+      setIsExportingPNG(false)
     }
+  }
 
-    pdf.save("carousel-post.pdf")
-    // Restore the original slide index so the user isn't disrupted
-    setCurrentSlideIndex(originalIndex)
+  const exportAllAsPDF = async () => {
+    setIsExportingPDF(true)
+    try {
+      const { default: html2canvas } = await import("html2canvas")
+      const { default: jsPDF } = await import("jspdf")
+      const element = document.getElementById("post-canvas")
+      if (!element) return
+
+      const originalIndex = currentSlideIndex
+      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [1080, 1080] })
+
+      for (let i = 0; i < slides.length; i++) {
+        setCurrentSlideIndex(i)
+        await new Promise((resolve) => setTimeout(resolve, 400))
+        const canvas = await html2canvas(element, {
+          backgroundColor: null,
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+        })
+        const imgData = canvas.toDataURL("image/png", 1.0)
+        if (i > 0) pdf.addPage([1080, 1080], "portrait")
+        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+      }
+      pdf.save("carousel-post.pdf")
+      setCurrentSlideIndex(originalIndex)
+    } catch (error) {
+      console.error("Failed to export PDF:", error)
+    } finally {
+      setIsExportingPDF(false)
+    }
   }
 
   return (
     <TooltipProvider delayDuration={0}>
       <div className="flex h-screen w-full bg-[#212121] text-zinc-300 font-sans text-sm">
-        {/* Left Sidebar */}
         <aside className="w-16 flex flex-col items-center py-4 bg-black/20 border-r border-zinc-800">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-lg bg-zinc-700 flex items-center justify-center shadow-md">
+            <PenSquare className="w-5 h-5 text-zinc-300" />
           </div>
         </aside>
 
-        {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
-          {/* Top Header */}
           <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#2D2D2D] z-10">
             <div className="flex items-center gap-4">
-              {/* Slide Navigation */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
-                disabled={currentSlideIndex === 0}
-              >
+              <Button variant="ghost" size="icon" onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))} disabled={currentSlideIndex === 0}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-white">
-                  Slide {currentSlideIndex + 1} of {slides.length}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
-                disabled={currentSlideIndex === slides.length - 1}
-              >
+              <div className="text-sm font-semibold text-white">Slide {currentSlideIndex + 1} of {slides.length}</div>
+              <Button variant="ghost" size="icon" onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))} disabled={currentSlideIndex === slides.length - 1}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            {/* REMOVED: Dead buttons (Clock, Play, Share) were here */}
-            <div />
-            <div />
           </header>
 
-          {/* Canvas Area */}
           <main className="flex-1 bg-[#E0E0E0] p-10 relative overflow-auto flex items-center justify-center">
             <div className="w-full max-w-xl">
               {currentSlide && (
-                <PostCanvas
-                  slide={currentSlide}
-                  onUpdateSection={updateSection}
-                  onUpdateAuthor={updateAuthor}
-                  onDeleteSection={deleteSection}
-                  onMoveSection={moveSection}
-                />
+                <PostCanvas slide={currentSlide} onUpdateSection={updateSection} onUpdateAuthor={updateAuthor} onDeleteSection={deleteSection} onMoveSection={moveSection} />
               )}
             </div>
 
-            {/* Bottom Floating Toolbar */}
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white rounded-lg shadow-2xl flex items-center p-1.5 gap-1 border border-zinc-700">
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("label-box")}>
-                    <Tag className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
+                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("label-box")}><Tag className="h-5 w-5" /></Button></TooltipTrigger>
                 <TooltipContent side="top">Add Label</TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("text-box")}>
-                    <Type className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
+                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("text-box")}><Type className="h-5 w-5" /></Button></TooltipTrigger>
                 <TooltipContent side="top">Add Text Box</TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("image")}>
-                    <ImageIcon className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
+                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("image")}><ImageIcon className="h-5 w-5" /></Button></TooltipTrigger>
                 <TooltipContent side="top">Add Image</TooltipContent>
               </Tooltip>
             </div>
           </main>
         </div>
 
-        {/* Right Properties Panel */}
         <aside className="w-72 p-4 space-y-4 border-l border-zinc-800 bg-[#2D2D2D] text-sm overflow-y-auto">
           <h2 className="text-lg font-semibold text-white">Post Studio</h2>
           <Accordion type="multiple" defaultValue={['actions', 'background', 'export']} className="w-full">
             <AccordionItem value="actions">
               <AccordionTrigger>Post Actions</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-2 p-1">
-                  <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start">
-                    <Plus className="mr-2 h-4 w-4" /> New Slide
-                  </Button>
-                  <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start">
-                    <Copy className="mr-2 h-4 w-4" /> Duplicate Slide
-                  </Button>
-                  <Button onClick={clearSlide} variant="outline" size="sm" className="w-full justify-start">
-                    <Eraser className="mr-2 h-4 w-4" /> Clear Slide
-                  </Button>
-                  {slides.length > 1 && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" className="w-full justify-start">
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Slide
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this slide.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={deleteSlide}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </AccordionContent>
+              <AccordionContent><div className="space-y-2 p-1">
+                  <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start"><Plus className="mr-2 h-4 w-4" /> New Slide</Button>
+                  <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start"><Copy className="mr-2 h-4 w-4" /> Duplicate Slide</Button>
+                  <Button onClick={clearSlide} variant="outline" size="sm" className="w-full justify-start"><Eraser className="mr-2 h-4 w-4" /> Clear Slide</Button>
+                  {slides.length > 1 && (<AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4" /> Delete Slide</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete this slide.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteSlide}>Continue</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
+              </div></AccordionContent>
             </AccordionItem>
             <AccordionItem value="background">
               <AccordionTrigger>Background Style</AccordionTrigger>
-              <AccordionContent>
-                <div className="p-1">
-                  <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
-                        <SelectItem key={key} value={key}>
-                          {name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </AccordionContent>
+              <AccordionContent><div className="p-1">
+                <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(BACKGROUNDS).map(([key, { name }]) => (<SelectItem key={key} value={key}>{name}</SelectItem>))}</SelectContent></Select>
+              </div></AccordionContent>
             </AccordionItem>
             <AccordionItem value="export">
               <AccordionTrigger>Export Options</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-2 p-1">
-                  <Button onClick={exportSlide} variant="secondary" className="w-full justify-start">
-                    <Download className="mr-2 h-4 w-4" /> Export as PNG
+              <AccordionContent><div className="space-y-2 p-1">
+                  <Button onClick={exportSlide} variant="secondary" className="w-full justify-start" disabled={isExportingPNG || isExportingPDF}>
+                    {isExportingPNG ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    {isExportingPNG ? "Exporting..." : "Export as PNG"}
                   </Button>
-                  <Button onClick={exportAllAsPDF} variant="secondary" className="w-full justify-start">
-                    <Download className="mr-2 h-4 w-4" /> Export All as PDF
+                  <Button onClick={exportAllAsPDF} variant="secondary" className="w-full justify-start" disabled={isExportingPDF || isExportingPNG}>
+                    {isExportingPDF ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    {isExportingPDF ? "Exporting..." : "Export All as PDF"}
                   </Button>
-                </div>
-              </AccordionContent>
+              </div></AccordionContent>
             </AccordionItem>
           </Accordion>
         </aside>
