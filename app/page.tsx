@@ -1,7 +1,7 @@
 // FILE: app/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,10 +34,6 @@ import {
   Type,
   Tag,
   Eraser,
-  Menu,
-  Clock,
-  Play,
-  Share,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -97,9 +93,9 @@ export default function Home() {
     },
   ])
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
-  
+
   const currentSlide = slides[currentSlideIndex]
-  
+
   // All your original functions (updateSection, addSlide, etc.) are preserved here...
   const updateSection = (sectionId: string, content: string) => {
     const updatedSlide = {
@@ -215,14 +211,14 @@ export default function Home() {
     setSlides(newSlides)
     setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1))
   }
-  
+
   const clearSlide = () => {
     const updatedSlide = {
       ...currentSlide,
-      sections: currentSlide.sections.filter(s => s.type === 'title'), // Keep only the title
-    };
-    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)));
-  };
+      sections: currentSlide.sections.filter((s) => s.type === "title"), // Keep only the title
+    }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
 
   const exportSlide = async () => {
     const { default: html2canvas } = await import("html2canvas")
@@ -250,12 +246,14 @@ export default function Home() {
     }, "image/png", 1.0)
   }
 
+  // FIX: This function is now corrected to properly handle state updates.
   const exportAllAsPDF = async () => {
     const { default: html2canvas } = await import("html2canvas")
     const { default: jsPDF } = await import("jspdf")
     const element = document.getElementById("post-canvas")
     if (!element) return
 
+    const originalIndex = currentSlideIndex
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "px",
@@ -264,6 +262,7 @@ export default function Home() {
 
     for (let i = 0; i < slides.length; i++) {
       setCurrentSlideIndex(i)
+      // This promise ensures React has time to re-render the canvas with the new slide's content
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       const canvas = await html2canvas(element, {
@@ -276,28 +275,23 @@ export default function Home() {
       })
 
       const imgData = canvas.toDataURL("image/png", 1.0)
-      if (i > 0) pdf.addPage()
+      if (i > 0) pdf.addPage([1080, 1080], "portrait")
       pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
     }
 
     pdf.save("carousel-post.pdf")
-    setCurrentSlideIndex(0); // Reset to first slide after export
+    // Restore the original slide index so the user isn't disrupted
+    setCurrentSlideIndex(originalIndex)
   }
 
   return (
     <TooltipProvider delayDuration={0}>
       <div className="flex h-screen w-full bg-[#212121] text-zinc-300 font-sans text-sm">
         {/* Left Sidebar */}
-        <aside className="w-16 flex flex-col items-center justify-between py-4 bg-black/20 border-r border-zinc-800">
-          <div className="flex flex-col items-center gap-4">
-            <Button variant="ghost" size="icon" className="text-white">
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
+        <aside className="w-16 flex flex-col items-center py-4 bg-black/20 border-r border-zinc-800">
+          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <div />
         </aside>
 
         {/* Main Content Area */}
@@ -305,7 +299,7 @@ export default function Home() {
           {/* Top Header */}
           <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#2D2D2D] z-10">
             <div className="flex items-center gap-4">
-               {/* Slide Navigation */}
+              {/* Slide Navigation */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -328,14 +322,9 @@ export default function Home() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex items-center gap-2 text-zinc-400">
-              <Clock className="h-5 w-5" />
-              <Play className="h-5 w-5" />
-            </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-4">
-              <Share className="mr-2 h-4 w-4" />
-              Share
-            </Button>
+            {/* REMOVED: Dead buttons (Clock, Play, Share) were here */}
+            <div />
+            <div />
           </header>
 
           {/* Canvas Area */}
