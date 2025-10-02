@@ -228,122 +228,116 @@ export default function Home() {
   }
 
   const convertAllColorsToRGB = (element: HTMLElement) => {
-    const allElements = [element, ...Array.from(element.querySelectorAll("*"))] as HTMLElement[]
-    
-    allElements.forEach((el) => {
-      const computed = window.getComputedStyle(el)
-      
-      const colorProps = [
+    const allElements = [element, ...Array.from(element.querySelectorAll("*"))] as HTMLElement[];
+    const colorProps = [
         'color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor',
         'borderBottomColor', 'borderLeftColor', 'outlineColor', 'textDecorationColor',
-        'caretColor', 'columnRuleColor'
-      ]
-      
-      colorProps.forEach(prop => {
-        const value = computed.getPropertyValue(prop)
-        if (value && value !== 'transparent' && !value.startsWith('rgb')) {
-          const temp = document.createElement('div')
-          temp.style.setProperty(prop, value)
-          document.body.appendChild(temp)
-          const finalColor = window.getComputedStyle(temp).getPropertyValue(prop)
-          document.body.removeChild(temp)
-          el.style.setProperty(prop, finalColor, 'important')
-        }
-      })
-    })
-  }
+        'caretColor', 'columnRuleColor', 'fill', 'stroke'
+    ];
 
-  const captureCurrentSlide = async (): Promise<HTMLCanvasElement> => {
-    const html2canvas = (await import("html2canvas")).default
-    const element = document.getElementById("post-canvas")
+    allElements.forEach(el => {
+        const computed = window.getComputedStyle(el);
+        colorProps.forEach(prop => {
+            const value = computed.getPropertyValue(prop);
+            if (value && (value.includes('oklab') || value.includes('oklch'))) {
+                const temp = document.createElement('div');
+                temp.style.setProperty(prop, value);
+                document.body.appendChild(temp);
+                const finalColor = window.getComputedStyle(temp).getPropertyValue(prop);
+                document.body.removeChild(temp);
+                el.style.setProperty(prop, finalColor, 'important');
+            }
+        });
+    });
+  };
+
+  const captureCurrentSlide = async (): Promise<string> => {
+    const html2canvas = (await import("html2canvas")).default;
+    const element = document.getElementById("post-canvas");
     if (!element) {
-      throw new Error("Canvas element not found")
+      throw new Error("Canvas element not found");
     }
 
-    const clone = element.cloneNode(true) as HTMLElement
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.style.position = 'fixed';
+    clone.style.left = '-9999px';
+    clone.style.top = '0px';
+    document.body.appendChild(clone);
     
     clone.querySelectorAll('[contenteditable="true"]').forEach(el => {
-      el.removeAttribute('contenteditable')
-      if (el instanceof HTMLElement) el.style.outline = 'none'
-    })
-    
-    clone.style.position = 'fixed'
-    clone.style.left = '-9999px'
-    clone.style.top = '0px'
-    document.body.appendChild(clone)
+      el.removeAttribute('contenteditable');
+      if (el instanceof HTMLElement) el.style.outline = 'none';
+    });
 
-    await new Promise(resolve => requestAnimationFrame(resolve))
-    
-    convertAllColorsToRGB(clone)
+    await new Promise(resolve => requestAnimationFrame(resolve));
 
-    const bgColor = window.getComputedStyle(clone).backgroundColor
+    convertAllColorsToRGB(clone);
 
     const canvas = await html2canvas(clone, {
-      backgroundColor: bgColor,
-      scale: 2,
+      backgroundColor: null,
+      scale: 3,
       logging: false,
       useCORS: true,
-      allowTaint: false,
-    })
+      allowTaint: true,
+    });
 
-    document.body.removeChild(clone)
-    return canvas
+    document.body.removeChild(clone);
+    return canvas.toDataURL("image/png", 1.0);
   }
 
   const exportSlide = async () => {
-    setIsExportingPNG(true)
-    setExportError(null)
+    setIsExportingPNG(true);
+    setExportError(null);
     try {
-      const canvas = await captureCurrentSlide()
-      const dataUrl = canvas.toDataURL('image/png', 1.0)
-      const link = document.createElement("a")
-      link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`
-      link.href = dataUrl
-      link.click()
+      const dataUrl = await captureCurrentSlide();
+      const link = document.createElement("a");
+      link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      URL.revokeObjectURL(link.href);
     } catch (error) {
-      console.error("Failed to export PNG:", error)
-      setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.")
+      console.error("Failed to export PNG:", error);
+      setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.");
     } finally {
-      setIsExportingPNG(false)
+      setIsExportingPNG(false);
     }
-  }
+  };
 
   const exportAllAsPDF = async () => {
-    setIsExportingPDF(true)
-    setExportError(null)
+    setIsExportingPDF(true);
+    setExportError(null);
     
     try {
-      const { default: jsPDF } = (await import("jspdf"))
+      const { default: jsPDF } = await import("jspdf");
       
-      const originalIndex = currentSlideIndex
+      const originalIndex = currentSlideIndex;
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
         format: [1080, 1080],
         compress: true,
-      })
+      });
 
       for (let i = 0; i < slides.length; i++) {
-        setCurrentSlideIndex(i)
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)))
+        setCurrentSlideIndex(i);
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50))); 
         
-        const canvas = await captureCurrentSlide()
-        const imgData = canvas.toDataURL("image/png", 1.0)
+        const imgData = await captureCurrentSlide();
         if (i > 0) {
-          pdf.addPage([1080, 1080], "portrait")
+          pdf.addPage([1080, 1080], "portrait");
         }
-        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST")
+        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST");
       }
       
-      pdf.save(`carousel-post-${Date.now()}.pdf`)
-      setCurrentSlideIndex(originalIndex)
+      pdf.save(`carousel-post-${Date.now()}.pdf`);
+      setCurrentSlideIndex(originalIndex);
     } catch (error) {
-      console.error("Failed to export PDF:", error)
-      setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.")
+      console.error("Failed to export PDF:", error);
+      setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.");
     } finally {
-      setIsExportingPDF(false)
+      setIsExportingPDF(false);
     }
-  }
+  };
 
 
   return (
