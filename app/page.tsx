@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useTheme } from "next-themes"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Copy, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Copy, Trash2, Sparkles } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -71,7 +71,6 @@ export default function Home() {
 
   const currentSlide = slides[currentSlideIndex]
 
-  // Effect to sync canvas background with the app theme
   useEffect(() => {
     if (theme) {
       const newBackground = theme === "dark" ? "darkGray" : "white"
@@ -80,13 +79,12 @@ export default function Home() {
         const slideToUpdate = prevSlides[currentSlideIndex]
         if (!slideToUpdate) return prevSlides
 
-        // Only update if the current background doesn't match the new theme's default
         const isCurrentBgDark = BACKGROUNDS[slideToUpdate.background as keyof typeof BACKGROUNDS]?.isDark
         const shouldUpdateToDark = theme === "dark" && !isCurrentBgDark
         const shouldUpdateToLight = theme === "light" && isCurrentBgDark
 
         if (!shouldUpdateToDark && !shouldUpdateToLight) {
-          return prevSlides // No update needed, avoids loops
+          return prevSlides
         }
 
         const isDark = BACKGROUNDS[newBackground as keyof typeof BACKGROUNDS]?.isDark
@@ -164,7 +162,6 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  // This function is for manual background changes from the dropdown
   const updateBackground = (background: string) => {
     setSlides((prevSlides) => {
       const slideToUpdate = prevSlides[currentSlideIndex]
@@ -288,24 +285,26 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="flex min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Sidebar */}
-      <div className="w-80 border-r border-border bg-card p-6 shadow-lg">
+      <div className="w-80 border-r border-border bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 shadow-xl">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Image src="/web-design.png" alt="Logo" width={40} height={40} className="rounded-md" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Post Generator</h1>
-                <p className="text-sm text-muted-foreground">Create stunning posts</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Post Studio</h1>
+                <p className="text-xs text-muted-foreground">Create stunning posts</p>
               </div>
             </div>
             <ThemeToggle />
           </div>
 
           {/* Background Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Background Style</label>
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground">Background Style</label>
             <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -321,18 +320,18 @@ export default function Home() {
           </div>
 
           {/* Add Elements */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Add Elements</label>
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground">Add Elements</label>
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => addSection("label-box")} variant="outline" size="sm" className="w-full">
+              <Button onClick={() => addSection("label-box")} variant="outline" size="sm" className="w-full hover:bg-purple-50 hover:border-purple-300 dark:hover:bg-purple-950/50">
                 <Plus className="mr-1 h-3 w-3" />
                 Label
               </Button>
-              <Button onClick={() => addSection("text-box")} variant="outline" size="sm" className="w-full">
+              <Button onClick={() => addSection("text-box")} variant="outline" size="sm" className="w-full hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-950/50">
                 <Plus className="mr-1 h-3 w-3" />
                 Text
               </Button>
-              <Button onClick={() => addSection("image")} variant="outline" size="sm" className="w-full col-span-2">
+              <Button onClick={() => addSection("image")} variant="outline" size="sm" className="w-full col-span-2 hover:bg-green-50 hover:border-green-300 dark:hover:bg-green-950/50">
                 <ImageIcon className="mr-1 h-3 w-3" />
                 Image
               </Button>
@@ -340,10 +339,10 @@ export default function Home() {
           </div>
 
           {/* Slide Controls */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Slide Actions</label>
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground">Slide Actions</label>
             <div className="space-y-2">
-              <Button onClick={addSlide} variant="outline" size="sm" className="w-full">
+              <Button onClick={addSlide} variant="default" size="sm" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                 <Plus className="mr-2 h-4 w-4" />
                 New Slide
               </Button>
@@ -352,7 +351,7 @@ export default function Home() {
                 Duplicate Slide
               </Button>
               {slides.length > 1 && (
-                <Button onClick={deleteSlide} variant="outline" size="sm" className="w-full">
+                <Button onClick={deleteSlide} variant="outline" size="sm" className="w-full hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950/50">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Slide
                 </Button>
@@ -361,10 +360,10 @@ export default function Home() {
           </div>
 
           {/* Export */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Export</label>
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-foreground">Export</label>
             <div className="space-y-2">
-              <Button onClick={exportSlide} className="w-full">
+              <Button onClick={exportSlide} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                 <Download className="mr-2 h-4 w-4" />
                 Export PNG
               </Button>
@@ -380,7 +379,7 @@ export default function Home() {
       {/* Main Canvas Area */}
       <div className="flex-1 flex flex-col">
         {/* Top Navigation */}
-        <div className="border-b border-border bg-card px-8 py-4 shadow-sm">
+        <div className="border-b border-border bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-8 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -392,7 +391,7 @@ export default function Home() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="text-center">
-                <div className="text-sm font-medium text-foreground">
+                <div className="text-sm font-semibold text-foreground">
                   Slide {currentSlideIndex + 1} of {slides.length}
                 </div>
                 <div className="text-xs text-muted-foreground">Click any text to edit</div>
