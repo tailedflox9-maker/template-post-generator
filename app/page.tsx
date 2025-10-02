@@ -238,7 +238,7 @@ export default function Home() {
   }
 
   const exportSlide = async () => {
-    const html2canvas = (await import("html2canvas")).default
+    const { default: html2canvas } = await import("html2canvas")
     const element = document.getElementById("post-canvas")
     if (!element) return
 
@@ -264,8 +264,8 @@ export default function Home() {
   }
 
   const exportAllAsPDF = async () => {
-    const html2canvas = (await import("html2canvas")).default
-    const jsPDF = (await import("jspdf")).default
+    const { default: html2canvas } = await import("html2canvas")
+    const { default: jsPDF } = await import("jspdf")
     const element = document.getElementById("post-canvas")
     if (!element) return
 
