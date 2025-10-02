@@ -233,95 +233,77 @@ export default function Home() {
     allElements.forEach((el) => {
       const computed = window.getComputedStyle(el)
       
-      // Get all color properties
       const colorProps = [
-        'color',
-        'backgroundColor',
-        'borderColor',
-        'borderTopColor',
-        'borderRightColor',
-        'borderBottomColor',
-        'borderLeftColor',
-        'outlineColor',
-        'textDecorationColor',
-        'caretColor',
-        'columnRuleColor'
+        'color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor',
+        'borderBottomColor', 'borderLeftColor', 'outlineColor', 'textDecorationColor',
+        'caretColor', 'columnRuleColor'
       ]
       
       colorProps.forEach(prop => {
         const value = computed.getPropertyValue(prop)
         if (value && value !== 'transparent' && !value.startsWith('rgb')) {
-          // Force set as inline style with rgb value
-          const rgbValue = computed.getPropertyValue(prop)
-          if (rgbValue.includes('oklab') || rgbValue.includes('oklch')) {
-            // Create temp element to compute final RGB value
-            const temp = document.createElement('div')
-            temp.style.setProperty(prop, value)
-            document.body.appendChild(temp)
-            const finalColor = window.getComputedStyle(temp).getPropertyValue(prop)
-            document.body.removeChild(temp)
-            el.style.setProperty(prop, finalColor, 'important')
-          } else {
-            el.style.setProperty(prop, rgbValue, 'important')
-          }
+          const temp = document.createElement('div')
+          temp.style.setProperty(prop, value)
+          document.body.appendChild(temp)
+          const finalColor = window.getComputedStyle(temp).getPropertyValue(prop)
+          document.body.removeChild(temp)
+          el.style.setProperty(prop, finalColor, 'important')
         }
       })
     })
   }
 
+  const captureCurrentSlide = async (): Promise<HTMLCanvasElement> => {
+    const html2canvas = (await import("html2canvas")).default
+    const element = document.getElementById("post-canvas")
+    if (!element) {
+      throw new Error("Canvas element not found")
+    }
+
+    const clone = element.cloneNode(true) as HTMLElement
+    
+    clone.querySelectorAll('[contenteditable="true"]').forEach(el => {
+      el.removeAttribute('contenteditable')
+      if (el instanceof HTMLElement) el.style.outline = 'none'
+    })
+    
+    clone.style.position = 'fixed'
+    clone.style.left = '-9999px'
+    clone.style.top = '0px'
+    document.body.appendChild(clone)
+
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    
+    convertAllColorsToRGB(clone)
+
+    const bgColor = window.getComputedStyle(clone).backgroundColor
+
+    const canvas = await html2canvas(clone, {
+      backgroundColor: bgColor,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: false,
+    })
+
+    document.body.removeChild(clone)
+    return canvas
+  }
+
   const exportSlide = async () => {
     setIsExportingPNG(true)
     setExportError(null)
-    
     try {
-      const html2canvas = (await import("html2canvas")).default
-      const element = document.getElementById("post-canvas")
-      if (!element) {
-        throw new Error("Canvas element not found")
-      }
-
-      // Clone the element
-      const clone = element.cloneNode(true) as HTMLElement
-      clone.style.position = 'fixed'
-      clone.style.left = '-9999px'
-      clone.style.top = '-9999px'
-      document.body.appendChild(clone)
-
-      // Wait for clone to render
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Convert all colors in clone
-      convertAllColorsToRGB(clone)
-
-      const bgColor = window.getComputedStyle(clone).backgroundColor
-
-      const canvas = await html2canvas(clone, {
-        backgroundColor: bgColor,
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: false,
-      })
-
-      // Remove clone
-      document.body.removeChild(clone)
-      
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement("a")
-          link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`
-          link.href = url
-          link.click()
-          URL.revokeObjectURL(url)
-        } else {
-          setExportError("Failed to create image blob")
-        }
-        setIsExportingPNG(false)
-      }, "image/png", 1.0)
+      const canvas = await captureCurrentSlide()
+      const dataUrl = canvas.toDataURL('image/png', 1.0)
+      const link = document.createElement("a")
+      link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`
+      link.href = dataUrl
+      link.click()
     } catch (error) {
       console.error("Failed to export PNG:", error)
       setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.")
+    } finally {
       setIsExportingPNG(false)
     }
   }
@@ -331,55 +313,22 @@ export default function Home() {
     setExportError(null)
     
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf")
-      ])
+      const { default: jsPDF } = (await import("jspdf"))
       
-      const element = document.getElementById("post-canvas")
-      if (!element) {
-        throw new Error("Canvas element not found")
-      }
-
       const originalIndex = currentSlideIndex
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
         format: [1080, 1080],
-        compress: true
+        compress: true,
       })
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i)
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50)))
         
-        // Clone the element
-        const clone = element.cloneNode(true) as HTMLElement
-        clone.style.position = 'fixed'
-        clone.style.left = '-9999px'
-        clone.style.top = '-9999px'
-        document.body.appendChild(clone)
-
-        // Wait for clone to render
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        // Convert all colors in clone
-        convertAllColorsToRGB(clone)
-
-        const bgColor = window.getComputedStyle(clone).backgroundColor
-
-        const capturedCanvas = await html2canvas(clone, {
-          backgroundColor: bgColor,
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: false,
-        })
-
-        // Remove clone
-        document.body.removeChild(clone)
-        
-        const imgData = capturedCanvas.toDataURL("image/png", 1.0)
+        const canvas = await captureCurrentSlide()
+        const imgData = canvas.toDataURL("image/png", 1.0)
         if (i > 0) {
           pdf.addPage([1080, 1080], "portrait")
         }
@@ -395,6 +344,7 @@ export default function Home() {
       setIsExportingPDF(false)
     }
   }
+
 
   return (
     <TooltipProvider delayDuration={0}>
