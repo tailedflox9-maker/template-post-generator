@@ -227,7 +227,6 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  // --- START: WORKING EXPORT LOGIC FROM PREVIOUS VERSION ---
   const exportSlide = async () => {
     setIsExportingPNG(true);
     setExportError(null);
@@ -238,10 +237,7 @@ export default function Home() {
 
       const canvas = await html2canvas(element, {
         backgroundColor: null,
-        scale: 3,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
+        scale: 3, // Higher scale for better quality
       });
 
       canvas.toBlob((blob) => {
@@ -283,14 +279,11 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i);
-        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for render
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         const canvas = await html2canvas(element, {
           backgroundColor: null,
           scale: 3,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
         });
 
         const imgData = canvas.toDataURL("image/png", 1.0);
@@ -307,8 +300,6 @@ export default function Home() {
         setIsExportingPDF(false);
     }
   };
-  // --- END: WORKING EXPORT LOGIC FROM PREVIOUS VERSION ---
-
 
   return (
     <TooltipProvider delayDuration={0}>
