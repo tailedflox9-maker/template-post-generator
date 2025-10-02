@@ -241,14 +241,11 @@ export default function Home() {
       }
 
       const canvas = await html2canvas(element, {
-        // FIX: Re-added the working options from your original code
         backgroundColor: null,
-        scale: 3,
+        scale: 2,
         logging: false,
         useCORS: true,
-        allowTaint: true,
-        imageTimeout: 0,
-        removeContainer: true,
+        allowTaint: false,
       })
       
       canvas.toBlob((blob) => {
@@ -257,18 +254,16 @@ export default function Home() {
           const link = document.createElement("a")
           link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`
           link.href = url
-          document.body.appendChild(link)
           link.click()
-          document.body.removeChild(link)
           URL.revokeObjectURL(url)
         } else {
-          throw new Error("Failed to create image blob")
+          setExportError("Failed to create image blob")
         }
+        setIsExportingPNG(false)
       }, "image/png", 1.0)
     } catch (error) {
       console.error("Failed to export PNG:", error)
       setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.")
-    } finally {
       setIsExportingPNG(false)
     }
   }
@@ -289,33 +284,30 @@ export default function Home() {
       }
 
       const originalIndex = currentSlideIndex
-      
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
-        format: [1080, 1080]
+        format: [1080, 1080],
+        compress: true
       })
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i)
-        await new Promise(resolve => setTimeout(resolve, 500))
+        await new Promise(resolve => setTimeout(resolve, 300))
         
         const canvas = await html2canvas(element, {
-          // FIX: Re-added the working options from your original code
           backgroundColor: null,
-          scale: 3,
+          scale: 2,
           logging: false,
           useCORS: true,
-          allowTaint: true,
-          imageTimeout: 0,
-          removeContainer: true,
+          allowTaint: false,
         })
         
         const imgData = canvas.toDataURL("image/png", 1.0)
         if (i > 0) {
           pdf.addPage([1080, 1080], "portrait")
         }
-        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+        pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST")
       }
       
       pdf.save(`carousel-post-${Date.now()}.pdf`)
