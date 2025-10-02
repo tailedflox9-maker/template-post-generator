@@ -229,6 +229,19 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
+  const convertColorToRGB = (color: string): string => {
+    // If already RGB, return as is
+    if (color.startsWith('rgb')) return color
+    
+    // Create temporary element to compute color
+    const temp = document.createElement('div')
+    temp.style.color = color
+    document.body.appendChild(temp)
+    const computed = window.getComputedStyle(temp).color
+    document.body.removeChild(temp)
+    return computed
+  }
+
   const exportSlide = async () => {
     setIsExportingPNG(true)
     setExportError(null)
@@ -241,25 +254,64 @@ export default function Home() {
       }
 
       const canvasElement = element as HTMLElement
-      const bgColor = window.getComputedStyle(canvasElement).backgroundColor
-
-      // Store original styles
-      const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
-      const allElements = canvasElement.querySelectorAll("*")
+      
+      // Store original styles and convert all colors to RGB
+      const styleMap = new Map<Element, { 
+        color: string
+        backgroundColor: string
+        borderColor: string
+        borderTopColor: string
+        borderRightColor: string
+        borderBottomColor: string
+        borderLeftColor: string
+        outlineColor: string
+      }>()
+      
+      const allElements = [canvasElement, ...Array.from(canvasElement.querySelectorAll("*"))]
       
       allElements.forEach((el) => {
         const htmlEl = el as HTMLElement
         const computed = window.getComputedStyle(htmlEl)
+        
         styleMap.set(el, {
           color: htmlEl.style.color,
           backgroundColor: htmlEl.style.backgroundColor,
-          borderColor: htmlEl.style.borderColor
+          borderColor: htmlEl.style.borderColor,
+          borderTopColor: htmlEl.style.borderTopColor,
+          borderRightColor: htmlEl.style.borderRightColor,
+          borderBottomColor: htmlEl.style.borderBottomColor,
+          borderLeftColor: htmlEl.style.borderLeftColor,
+          outlineColor: htmlEl.style.outlineColor,
         })
-        // Apply computed RGB values
-        htmlEl.style.color = computed.color
-        htmlEl.style.backgroundColor = computed.backgroundColor
-        htmlEl.style.borderColor = computed.borderColor
+        
+        // Convert all color properties to RGB
+        if (computed.color && computed.color !== 'transparent') {
+          htmlEl.style.color = convertColorToRGB(computed.color)
+        }
+        if (computed.backgroundColor && computed.backgroundColor !== 'transparent') {
+          htmlEl.style.backgroundColor = convertColorToRGB(computed.backgroundColor)
+        }
+        if (computed.borderColor && computed.borderColor !== 'transparent') {
+          htmlEl.style.borderColor = convertColorToRGB(computed.borderColor)
+        }
+        if (computed.borderTopColor && computed.borderTopColor !== 'transparent') {
+          htmlEl.style.borderTopColor = convertColorToRGB(computed.borderTopColor)
+        }
+        if (computed.borderRightColor && computed.borderRightColor !== 'transparent') {
+          htmlEl.style.borderRightColor = convertColorToRGB(computed.borderRightColor)
+        }
+        if (computed.borderBottomColor && computed.borderBottomColor !== 'transparent') {
+          htmlEl.style.borderBottomColor = convertColorToRGB(computed.borderBottomColor)
+        }
+        if (computed.borderLeftColor && computed.borderLeftColor !== 'transparent') {
+          htmlEl.style.borderLeftColor = convertColorToRGB(computed.borderLeftColor)
+        }
+        if (computed.outlineColor && computed.outlineColor !== 'transparent') {
+          htmlEl.style.outlineColor = convertColorToRGB(computed.outlineColor)
+        }
       })
+
+      const bgColor = convertColorToRGB(window.getComputedStyle(canvasElement).backgroundColor)
 
       const canvas = await html2canvas(canvasElement, {
         backgroundColor: bgColor,
@@ -277,6 +329,11 @@ export default function Home() {
           htmlEl.style.color = original.color
           htmlEl.style.backgroundColor = original.backgroundColor
           htmlEl.style.borderColor = original.borderColor
+          htmlEl.style.borderTopColor = original.borderTopColor
+          htmlEl.style.borderRightColor = original.borderRightColor
+          htmlEl.style.borderBottomColor = original.borderBottomColor
+          htmlEl.style.borderLeftColor = original.borderLeftColor
+          htmlEl.style.outlineColor = original.outlineColor
         }
       })
       
@@ -326,28 +383,65 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i)
-        await new Promise(resolve => setTimeout(resolve, 500)) // Increased timeout for re-render
+        await new Promise(resolve => setTimeout(resolve, 500))
         
-        // Get current background color after re-render
-        const currentBgColor = window.getComputedStyle(canvasElement).backgroundColor
-
-        // Store original styles
-        const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
-        const allElements = canvasElement.querySelectorAll("*")
+        // Store original styles and convert all colors to RGB
+        const styleMap = new Map<Element, { 
+          color: string
+          backgroundColor: string
+          borderColor: string
+          borderTopColor: string
+          borderRightColor: string
+          borderBottomColor: string
+          borderLeftColor: string
+          outlineColor: string
+        }>()
+        
+        const allElements = [canvasElement, ...Array.from(canvasElement.querySelectorAll("*"))]
         
         allElements.forEach((el) => {
           const htmlEl = el as HTMLElement
           const computed = window.getComputedStyle(htmlEl)
+          
           styleMap.set(el, {
             color: htmlEl.style.color,
             backgroundColor: htmlEl.style.backgroundColor,
-            borderColor: htmlEl.style.borderColor
+            borderColor: htmlEl.style.borderColor,
+            borderTopColor: htmlEl.style.borderTopColor,
+            borderRightColor: htmlEl.style.borderRightColor,
+            borderBottomColor: htmlEl.style.borderBottomColor,
+            borderLeftColor: htmlEl.style.borderLeftColor,
+            outlineColor: htmlEl.style.outlineColor,
           })
-          // Apply computed RGB values
-          htmlEl.style.color = computed.color
-          htmlEl.style.backgroundColor = computed.backgroundColor
-          htmlEl.style.borderColor = computed.borderColor
+          
+          // Convert all color properties to RGB
+          if (computed.color && computed.color !== 'transparent') {
+            htmlEl.style.color = convertColorToRGB(computed.color)
+          }
+          if (computed.backgroundColor && computed.backgroundColor !== 'transparent') {
+            htmlEl.style.backgroundColor = convertColorToRGB(computed.backgroundColor)
+          }
+          if (computed.borderColor && computed.borderColor !== 'transparent') {
+            htmlEl.style.borderColor = convertColorToRGB(computed.borderColor)
+          }
+          if (computed.borderTopColor && computed.borderTopColor !== 'transparent') {
+            htmlEl.style.borderTopColor = convertColorToRGB(computed.borderTopColor)
+          }
+          if (computed.borderRightColor && computed.borderRightColor !== 'transparent') {
+            htmlEl.style.borderRightColor = convertColorToRGB(computed.borderRightColor)
+          }
+          if (computed.borderBottomColor && computed.borderBottomColor !== 'transparent') {
+            htmlEl.style.borderBottomColor = convertColorToRGB(computed.borderBottomColor)
+          }
+          if (computed.borderLeftColor && computed.borderLeftColor !== 'transparent') {
+            htmlEl.style.borderLeftColor = convertColorToRGB(computed.borderLeftColor)
+          }
+          if (computed.outlineColor && computed.outlineColor !== 'transparent') {
+            htmlEl.style.outlineColor = convertColorToRGB(computed.outlineColor)
+          }
         })
+
+        const currentBgColor = convertColorToRGB(window.getComputedStyle(canvasElement).backgroundColor)
 
         const capturedCanvas = await html2canvas(canvasElement, {
           backgroundColor: currentBgColor,
@@ -365,6 +459,11 @@ export default function Home() {
             htmlEl.style.color = original.color
             htmlEl.style.backgroundColor = original.backgroundColor
             htmlEl.style.borderColor = original.borderColor
+            htmlEl.style.borderTopColor = original.borderTopColor
+            htmlEl.style.borderRightColor = original.borderRightColor
+            htmlEl.style.borderBottomColor = original.borderBottomColor
+            htmlEl.style.borderLeftColor = original.borderLeftColor
+            htmlEl.style.outlineColor = original.outlineColor
           }
         })
         
