@@ -227,25 +227,24 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const convertAllColorsToRGB = (element: HTMLElement) => {
+  const convertUnsupportedColors = (element: HTMLElement) => {
     const allElements = [element, ...Array.from(element.querySelectorAll("*"))] as HTMLElement[];
     const colorProps = [
         'color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor',
-        'borderBottomColor', 'borderLeftColor', 'outlineColor', 'textDecorationColor',
-        'caretColor', 'columnRuleColor', 'fill', 'stroke'
+        'borderBottomColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke'
     ];
 
     allElements.forEach(el => {
-        const computed = window.getComputedStyle(el);
+        const style = window.getComputedStyle(el);
         colorProps.forEach(prop => {
-            const value = computed.getPropertyValue(prop);
+            const value = style.getPropertyValue(prop);
             if (value && (value.includes('oklab') || value.includes('oklch'))) {
-                const temp = document.createElement('div');
-                temp.style.setProperty(prop, value);
-                document.body.appendChild(temp);
-                const finalColor = window.getComputedStyle(temp).getPropertyValue(prop);
-                document.body.removeChild(temp);
-                el.style.setProperty(prop, finalColor, 'important');
+                const tempEl = document.createElement('div');
+                tempEl.style.color = value;
+                document.body.appendChild(tempEl);
+                const rgbColor = window.getComputedStyle(tempEl).color;
+                document.body.removeChild(tempEl);
+                el.style.setProperty(prop, rgbColor, 'important');
             }
         });
     });
@@ -264,18 +263,21 @@ export default function Home() {
     clone.style.top = '0px';
     document.body.appendChild(clone);
     
+    // Remove contenteditable attributes and outlines for a clean capture
     clone.querySelectorAll('[contenteditable="true"]').forEach(el => {
       el.removeAttribute('contenteditable');
       if (el instanceof HTMLElement) el.style.outline = 'none';
     });
 
+    // Wait for the next frame to ensure styles are applied
     await new Promise(resolve => requestAnimationFrame(resolve));
 
-    convertAllColorsToRGB(clone);
+    // Convert oklch/oklab colors to RGB
+    convertUnsupportedColors(clone);
 
     const canvas = await html2canvas(clone, {
-      backgroundColor: null,
-      scale: 3,
+      backgroundColor: null, // Use transparent background
+      scale: 3, // Higher scale for better quality
       logging: false,
       useCORS: true,
       allowTaint: true,
@@ -320,6 +322,7 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i);
+        // Wait for React to re-render and browser to paint
         await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50))); 
         
         const imgData = await captureCurrentSlide();
@@ -330,10 +333,14 @@ export default function Home() {
       }
       
       pdf.save(`carousel-post-${Date.now()}.pdf`);
+      // Restore original slide index
       setCurrentSlideIndex(originalIndex);
     } catch (error) {
       console.error("Failed to export PDF:", error);
       setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.");
+      // Restore original slide index even on error
+      const originalIndex = currentSlideIndex;
+      setCurrentSlideIndex(originalIndex);
     } finally {
       setIsExportingPDF(false);
     }
