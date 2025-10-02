@@ -33,6 +33,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import domtoimage from 'dom-to-image-more';
 
 export interface Section {
   id: string
@@ -227,56 +228,44 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  // FIXED EXPORT FUNCTION
   const exportSlide = async () => {
     setIsExportingPNG(true);
     setExportError(null);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const element = document.getElementById("post-canvas");
-      if (!element) return;
-
-      const canvas = await html2canvas(element, {
-        backgroundColor: null,
-        scale: 3,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-        imageTimeout: 0,
-        removeContainer: true,
-      });
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const link = document.createElement("a");
-          link.download = `slide-${currentSlideIndex + 1}.png`;
-          link.href = URL.createObjectURL(blob);
-          link.click();
-          URL.revokeObjectURL(link.href);
-        } else {
-          throw new Error("Failed to create image blob.");
-        }
-      }, "image/png", 1.0);
-    } catch (error) {
-        console.error("Failed to export PNG:", error);
-        setExportError(error instanceof Error ? error.message : "An unknown error occurred during PNG export.");
-    } finally {
+    const element = document.getElementById("post-canvas");
+    if (!element) {
+        setExportError("Canvas element not found.");
         setIsExportingPNG(false);
+        return;
+    }
+
+    try {
+      const dataUrl = await domtoimage.toPng(element, { quality: 1.0, scale: 2 });
+      const link = document.createElement("a");
+      link.download = `slide-${currentSlideIndex + 1}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Failed to export PNG:", error);
+      setExportError(error instanceof Error ? error.message : "An unknown error occurred during PNG export.");
+    } finally {
+      setIsExportingPNG(false);
     }
   };
 
-  // FIXED EXPORT ALL AS PDF FUNCTION
   const exportAllAsPDF = async () => {
     setIsExportingPDF(true);
     setExportError(null);
     const originalIndex = currentSlideIndex;
 
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const { default: jsPDF } = (await import("jspdf"));
-      const element = document.getElementById("post-canvas");
-      if (!element) return;
+    const element = document.getElementById("post-canvas");
+    if (!element) {
+        setExportError("Canvas element not found.");
+        setIsExportingPDF(false);
+        return;
+    }
 
+    try {
+      const { default: jsPDF } = (await import("jspdf"));
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -288,29 +277,22 @@ export default function Home() {
         setCurrentSlideIndex(i);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const canvas = await html2canvas(element, {
-          backgroundColor: null,
-          scale: 3,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          imageTimeout: 0,
-        });
-
-        const imgData = canvas.toDataURL("image/png", 1.0);
+        const imgData = await domtoimage.toPng(element, { quality: 1.0, scale: 2 });
+        
         if (i > 0) pdf.addPage([1080, 1080], "portrait");
         pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST");
       }
 
       pdf.save("carousel-post.pdf");
     } catch (error) {
-        console.error("Failed to export PDF:", error);
-        setExportError(error instanceof Error ? error.message : "An unknown error occurred during PDF export.");
+      console.error("Failed to export PDF:", error);
+      setExportError(error instanceof Error ? error.message : "An unknown error occurred during PDF export.");
     } finally {
-        setCurrentSlideIndex(originalIndex);
-        setIsExportingPDF(false);
+      setCurrentSlideIndex(originalIndex);
+      setIsExportingPDF(false);
     }
   };
+
 
   return (
     <TooltipProvider delayDuration={0}>
