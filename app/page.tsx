@@ -227,46 +227,52 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
+  // --- START: WORKING EXPORT LOGIC FROM PREVIOUS VERSION ---
   const exportSlide = async () => {
     setIsExportingPNG(true);
     setExportError(null);
     try {
       const html2canvas = (await import("html2canvas")).default;
       const element = document.getElementById("post-canvas");
-      if (!element) throw new Error("Canvas element not found");
+      if (!element) return;
 
       const canvas = await html2canvas(element, {
         backgroundColor: null,
         scale: 3,
+        logging: false,
         useCORS: true,
         allowTaint: true,
       });
 
-      const dataUrl = canvas.toDataURL("image/png", 1.0);
-      const link = document.createElement("a");
-      link.download = `slide-${currentSlideIndex + 1}.png`;
-      link.href = dataUrl;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const link = document.createElement("a");
+          link.download = `slide-${currentSlideIndex + 1}.png`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          URL.revokeObjectURL(link.href);
+        } else {
+          throw new Error("Failed to create image blob.");
+        }
+      }, "image/png", 1.0);
     } catch (error) {
-      console.error("Failed to export PNG:", error);
-      setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.");
+        console.error("Failed to export PNG:", error);
+        setExportError(error instanceof Error ? error.message : "An unknown error occurred during PNG export.");
     } finally {
-      setIsExportingPNG(false);
+        setIsExportingPNG(false);
     }
   };
 
   const exportAllAsPDF = async () => {
     setIsExportingPDF(true);
     setExportError(null);
-    const originalIndex = currentSlideIndex; // Save the original index
+    const originalIndex = currentSlideIndex;
 
     try {
       const html2canvas = (await import("html2canvas")).default;
-      const { default: jsPDF } = await import("jspdf");
-      
+      const { default: jsPDF } = (await import("jspdf"));
       const element = document.getElementById("post-canvas");
-      if (!element) throw new Error("Canvas element not found");
+      if (!element) return;
 
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -277,13 +283,14 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i);
-        await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait for render
 
         const canvas = await html2canvas(element, {
-            backgroundColor: null,
-            scale: 3,
-            useCORS: true,
-            allowTaint: true,
+          backgroundColor: null,
+          scale: 3,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
         });
 
         const imgData = canvas.toDataURL("image/png", 1.0);
@@ -293,13 +300,15 @@ export default function Home() {
 
       pdf.save("carousel-post.pdf");
     } catch (error) {
-      console.error("Failed to export PDF:", error);
-      setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.");
+        console.error("Failed to export PDF:", error);
+        setExportError(error instanceof Error ? error.message : "An unknown error occurred during PDF export.");
     } finally {
-      setCurrentSlideIndex(originalIndex); // Restore original slide
-      setIsExportingPDF(false);
+        setCurrentSlideIndex(originalIndex);
+        setIsExportingPDF(false);
     }
   };
+  // --- END: WORKING EXPORT LOGIC FROM PREVIOUS VERSION ---
+
 
   return (
     <TooltipProvider delayDuration={0}>
