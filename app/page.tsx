@@ -229,97 +229,56 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const prepareForExport = (canvasWrapper: HTMLDivElement | null): (() => void) => {
-    if (!canvasWrapper) return () => {};
-    const canvasElement = canvasWrapper.querySelector('#post-canvas') as HTMLDivElement;
-    if (!canvasElement) return () => {};
-
-    // Temporarily set to full export size
-    const originalWidth = canvasWrapper.style.width;
-    const originalMaxWidth = canvasWrapper.style.maxWidth;
-    canvasWrapper.style.width = '1080px';
-    canvasWrapper.style.maxWidth = '1080px';
-
-    // Remove rounded and shadow for clean export if desired (optional)
-    const originalBorderRadius = canvasElement.style.borderRadius;
-    const originalBoxShadow = canvasElement.style.boxShadow;
-    const originalBorder = canvasElement.style.border;
-    canvasElement.style.borderRadius = '0';
-    canvasElement.style.boxShadow = 'none';
-    canvasElement.style.border = 'none';
-
-    return () => {
-      // Restore
-      canvasWrapper.style.width = originalWidth;
-      canvasWrapper.style.maxWidth = originalMaxWidth;
-      canvasElement.style.borderRadius = originalBorderRadius;
-      canvasElement.style.boxShadow = originalBoxShadow;
-      canvasElement.style.border = originalBorder;
-    };
-  };
-
-  const captureCanvas = async (html2canvas: any) => {
-    const canvasWrapper = canvasRef.current;
-    if (!canvasWrapper) throw new Error("Canvas wrapper not found");
-
-    const restore = prepareForExport(canvasWrapper);
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); // Wait for layout
-
-    const element = document.getElementById("post-canvas") as HTMLDivElement;
-    if (!element) {
-      restore();
-      throw new Error("Canvas element not found");
-    }
-
-    // Store and apply computed styles
-    const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>();
-    const allElements = element.querySelectorAll("*");
-    
-    allElements.forEach((el) => {
-      const htmlEl = el as HTMLElement;
-      const computed = window.getComputedStyle(htmlEl);
-      styleMap.set(el, {
-        color: htmlEl.style.color,
-        backgroundColor: htmlEl.style.backgroundColor,
-        borderColor: htmlEl.style.borderColor
-      });
-      htmlEl.style.color = computed.color;
-      htmlEl.style.backgroundColor = computed.backgroundColor;
-      htmlEl.style.borderColor = computed.borderColor;
-    });
-
-    const canvas = await html2canvas(element, {
-      backgroundColor: null,
-      scale: 2, // High res
-      logging: false,
-      useCORS: true,
-      allowTaint: false,
-      width: 1080,
-      height: 1080,
-    });
-
-    // Restore styles
-    allElements.forEach((el) => {
-      const htmlEl = el as HTMLElement;
-      const original = styleMap.get(el);
-      if (original) {
-        htmlEl.style.color = original.color;
-        htmlEl.style.backgroundColor = original.backgroundColor;
-        htmlEl.style.borderColor = original.borderColor;
-      }
-    });
-
-    restore();
-    return canvas;
-  };
-
   const exportSlide = async () => {
     setIsExportingPNG(true)
     setExportError(null)
     
     try {
       const html2canvas = (await import("html2canvas")).default
-      const canvas = await captureCanvas(html2canvas)
+      const element = document.getElementById("post-canvas")
+      if (!element) {
+        throw new Error("Canvas element not found")
+      }
+
+      const canvasElement = element as HTMLElement
+      const bgColor = window.getComputedStyle(canvasElement).backgroundColor
+
+      // Store original styles
+      const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
+      const allElements = canvasElement.querySelectorAll("*")
+      
+      allElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        const computed = window.getComputedStyle(htmlEl)
+        styleMap.set(el, {
+          color: htmlEl.style.color,
+          backgroundColor: htmlEl.style.backgroundColor,
+          borderColor: htmlEl.style.borderColor
+        })
+        // Apply computed RGB values
+        htmlEl.style.color = computed.color
+        htmlEl.style.backgroundColor = computed.backgroundColor
+        htmlEl.style.borderColor = computed.borderColor
+      })
+
+      const canvas = await html2canvas(canvasElement, {
+        backgroundColor: bgColor,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: false,
+      })
+
+      // Restore original styles
+      allElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        const original = styleMap.get(el)
+        if (original) {
+          htmlEl.style.color = original.color
+          htmlEl.style.backgroundColor = original.backgroundColor
+          htmlEl.style.borderColor = original.borderColor
+        }
+      })
       
       canvas.toBlob((blob) => {
         if (blob) {
@@ -351,11 +310,12 @@ export default function Home() {
         import("jspdf")
       ])
       
-      const canvasWrapper = canvasRef.current
-      if (!canvasWrapper) {
-        throw new Error("Canvas wrapper not found")
+      const element = document.getElementById("post-canvas")
+      if (!element) {
+        throw new Error("Canvas element not found")
       }
 
+      const canvasElement = element as HTMLElement
       const originalIndex = currentSlideIndex
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -366,14 +326,49 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i)
-        await new Promise(resolve => setTimeout(resolve, 100)) // Small delay for state update
+        await new Promise(resolve => setTimeout(resolve, 500)) // Increased timeout for re-render
         
-        // Wait for re-render and layout
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        // Get current background color after re-render
+        const currentBgColor = window.getComputedStyle(canvasElement).backgroundColor
+
+        // Store original styles
+        const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
+        const allElements = canvasElement.querySelectorAll("*")
         
-        const canvas = await captureCanvas(html2canvas)
-        const imgData = canvas.toDataURL("image/png", 1.0)
+        allElements.forEach((el) => {
+          const htmlEl = el as HTMLElement
+          const computed = window.getComputedStyle(htmlEl)
+          styleMap.set(el, {
+            color: htmlEl.style.color,
+            backgroundColor: htmlEl.style.backgroundColor,
+            borderColor: htmlEl.style.borderColor
+          })
+          // Apply computed RGB values
+          htmlEl.style.color = computed.color
+          htmlEl.style.backgroundColor = computed.backgroundColor
+          htmlEl.style.borderColor = computed.borderColor
+        })
+
+        const capturedCanvas = await html2canvas(canvasElement, {
+          backgroundColor: currentBgColor,
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: false,
+        })
+
+        // Restore original styles
+        allElements.forEach((el) => {
+          const htmlEl = el as HTMLElement
+          const original = styleMap.get(el)
+          if (original) {
+            htmlEl.style.color = original.color
+            htmlEl.style.backgroundColor = original.backgroundColor
+            htmlEl.style.borderColor = original.borderColor
+          }
+        })
         
+        const imgData = capturedCanvas.toDataURL("image/png", 1.0)
         if (i > 0) {
           pdf.addPage([1080, 1080], "portrait")
         }
