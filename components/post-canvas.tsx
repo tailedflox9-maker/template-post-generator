@@ -1,3 +1,4 @@
+// FILE: components/post-canvas.tsx
 "use client"
 
 import { useState, useRef } from "react"
@@ -13,6 +14,7 @@ interface PostCanvasProps {
   onMoveSection: (sectionId: string, direction: "up" | "down") => void
 }
 
+// ... (getBackgroundStyle and isDarkBackground functions remain the same)
 const getBackgroundStyle = (background: string) => {
   switch (background) {
     case "dark":
@@ -54,6 +56,7 @@ const isDarkBackground = (background: string) => {
   return ["dark", "darkGray", "darkBlue", "black"].includes(background)
 }
 
+
 export function PostCanvas({
   slide,
   onUpdateSection,
@@ -67,7 +70,8 @@ export function PostCanvas({
 
   const isDark = isDarkBackground(slide.background)
   const textColor = isDark ? "#ffffff" : "#1f2937"
-  const borderColor = isDark ? "#4b5563" : "#1f2937"
+  const borderColor = isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.2)"
+  const ghostButtonColor = isDark ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-black"
 
   const handleImageUpload = (sectionId: string, file: File) => {
     const reader = new FileReader()
@@ -81,7 +85,7 @@ export function PostCanvas({
   return (
     <div
       id="post-canvas"
-      className="relative aspect-square w-full rounded-xl border-2 border-border p-12 shadow-2xl"
+      className="relative aspect-square w-full rounded-xl p-12 shadow-2xl border border-black/10"
       style={getBackgroundStyle(slide.background)}
     >
       {/* Sections */}
@@ -95,7 +99,7 @@ export function PostCanvas({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-6 w-6"
+                    className={`h-6 w-6 ${ghostButtonColor}`}
                     onClick={() => onMoveSection(section.id, "up")}
                   >
                     <ChevronUp className="h-4 w-4" />
@@ -105,7 +109,7 @@ export function PostCanvas({
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-6 w-6"
+                    className={`h-6 w-6 ${ghostButtonColor}`}
                     onClick={() => onMoveSection(section.id, "down")}
                   >
                     <ChevronDown className="h-4 w-4" />
@@ -119,7 +123,7 @@ export function PostCanvas({
               <Button
                 size="icon"
                 variant="ghost"
-                className="absolute -right-2 -top-2 z-10 h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                className={`absolute -right-2 -top-2 z-10 h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 ${ghostButtonColor}`}
                 onClick={() => onDeleteSection(section.id)}
               >
                 <X className="h-4 w-4" />
@@ -195,7 +199,8 @@ export function PostCanvas({
                 </p>
               </div>
             )}
-
+            
+            {/* Image section remains unchanged */}
             {section.type === "image" && (
               <div className="relative flex justify-center">
                 {section.content ? (
@@ -261,6 +266,7 @@ export function PostCanvas({
                 />
               </div>
             )}
+
           </div>
         ))}
         </div>
