@@ -229,7 +229,7 @@ export default function Home() {
   }
 
   const exportSlide = async () => {
-    const html2canvas = (await import("html2canvas-pro")).default  // Changed to pro version
+    const html2canvas = (await import("html2canvas")).default
     const element = document.getElementById("post-canvas")
     if (!element) return
 
@@ -239,8 +239,6 @@ export default function Home() {
       logging: false,
       useCORS: true,
       allowTaint: true,
-      imageTimeout: 0,
-      removeContainer: true,
     })
 
     canvas.toBlob((blob) => {
@@ -255,7 +253,7 @@ export default function Home() {
   }
 
   const exportAllAsPDF = async () => {
-    const html2canvas = (await import("html2canvas-pro")).default  // Changed to pro version
+    const html2canvas = (await import("html2canvas")).default
     const jsPDF = (await import("jspdf")).default
     const element = document.getElementById("post-canvas")
     if (!element) return
@@ -276,7 +274,6 @@ export default function Home() {
         logging: false,
         useCORS: true,
         allowTaint: true,
-        imageTimeout: 0,
       })
 
       const imgData = canvas.toDataURL("image/png", 1.0)
