@@ -1,279 +1,463 @@
 // FILE: app/page.tsx
+"use client"
+
+import { useState, useEffect } from "react"
+import { PostCanvas } from "@/components/post-canvas"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+} from "@/components/ui/accordion"
 import {
-  Menu,
-  Layers,
-  Box,
-  Paintbrush,
-  FileText,
-  LayoutGrid,
-  Tag,
-  MessageSquare,
-  LogIn,
-  Sun,
-  HelpCircle,
-  Book,
-  Clock,
-  Play,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Plus,
-  MousePointer,
-  BoxSelect,
-  PenTool,
-  Move,
-  Spline,
-  Circle,
-  Type,
-  Maximize2,
+  Download,
+  ImageIcon,
   Copy,
   Trash2,
-  MessageCircleQuestion,
-  PencilRuler,
-  Scissors,
-  Shapes,
-} from 'lucide-react'
+  Sparkles,
+  Type,
+  Tag,
+  Eraser,
+  Menu,
+  Clock,
+  Play,
+  Share,
+} from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// A placeholder component to mimic the floor plans in your original screenshot
-const FloorPlanPlaceholder = ({ className }: { className?: string }) => (
-  <div
-    className={`bg-white border border-gray-300 p-4 shadow-sm relative ${className}`}
-  >
-    <div className="w-full h-48 border-2 border-dashed border-gray-200 flex items-center justify-center">
-      <p className="text-gray-400 text-sm">Floor Plan Area</p>
-    </div>
-    <div className="absolute top-2 right-2 text-xs text-gray-500">
-      Drawing.dwg
-    </div>
-  </div>
-)
+export interface Section {
+  id: string
+  type: "title" | "label-box" | "text-box" | "image"
+  content: string
+  style?: {
+    backgroundColor?: string
+    textColor?: string
+    fontSize?: string
+  }
+}
 
-export default function HomePlanningPage() {
+export interface Slide {
+  id: string
+  sections: Section[]
+  author: string
+  background: string
+}
+
+const BACKGROUNDS = {
+  dark: { name: "Dark Theme", value: "#181C14", isDark: true },
+  black: { name: "Black", value: "#0a0a0a", isDark: true },
+  white: { name: "Clean White", value: "#ffffff", isDark: false },
+  cream: { name: "Warm Cream", value: "#fef9f3", isDark: false },
+  lightGray: { name: "Light Gray", value: "#f3f4f6", isDark: false },
+  grainy: { name: "Grainy Texture", value: "#f8f8f8", isDark: false },
+  dots: { name: "Subtle Dots", value: "#fafafa", isDark: false },
+}
+
+export default function Home() {
+  const [slides, setSlides] = useState<Slide[]>([
+    {
+      id: "1",
+      sections: [
+        {
+          id: "1",
+          type: "title",
+          content: "YOUR POST TITLE HERE",
+          style: { fontSize: "48px" },
+        },
+        {
+          id: "2",
+          type: "label-box",
+          content: "Section Label",
+          style: { backgroundColor: "#3B82F6", textColor: "#FFFFFF" },
+        },
+        {
+          id: "3",
+          type: "text-box",
+          content: "Add your main content here. Click to edit any text.",
+        },
+      ],
+      author: "Your Name",
+      background: "white",
+    },
+  ])
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  
+  const currentSlide = slides[currentSlideIndex]
+  
+  // All your original functions (updateSection, addSlide, etc.) are preserved here...
+  const updateSection = (sectionId: string, content: string) => {
+    const updatedSlide = {
+      ...currentSlide,
+      sections: currentSlide.sections.map((s) => (s.id === sectionId ? { ...s, content } : s)),
+    }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
+
+  const updateAuthor = (author: string) => {
+    const updatedSlide = { ...currentSlide, author }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
+
+  const moveSection = (sectionId: string, direction: "up" | "down") => {
+    const index = currentSlide.sections.findIndex((s) => s.id === sectionId)
+    if ((direction === "up" && index === 0) || (direction === "down" && index === currentSlide.sections.length - 1)) {
+      return
+    }
+
+    const newSections = [...currentSlide.sections]
+    const targetIndex = direction === "up" ? index - 1 : index + 1
+    ;[newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]]
+
+    const updatedSlide = { ...currentSlide, sections: newSections }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
+
+  const addSection = (type: Section["type"]) => {
+    const isDark = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.isDark
+    const labelColor = isDark ? "#10b981" : "#3B82F6"
+
+    const newSection: Section = {
+      id: Date.now().toString(),
+      type,
+      content: type === "label-box" ? "New Label" : type === "image" ? "" : "New content here",
+      style: type === "label-box" ? { backgroundColor: labelColor, textColor: "#FFFFFF" } : {},
+    }
+    const updatedSlide = {
+      ...currentSlide,
+      sections: [...currentSlide.sections, newSection],
+    }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
+
+  const deleteSection = (sectionId: string) => {
+    const updatedSlide = {
+      ...currentSlide,
+      sections: currentSlide.sections.filter((s) => s.id !== sectionId),
+    }
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
+  }
+
+  const updateBackground = (background: string) => {
+    setSlides((prevSlides) => {
+      const slideToUpdate = prevSlides[currentSlideIndex]
+      if (!slideToUpdate) return prevSlides
+
+      const isDark = BACKGROUNDS[background as keyof typeof BACKGROUNDS]?.isDark
+      const newLabelColor = isDark ? "#10b981" : "#3B82F6"
+
+      const updatedSections = slideToUpdate.sections.map((section) => {
+        if (section.type === "label-box") {
+          return {
+            ...section,
+            style: { ...section.style, backgroundColor: newLabelColor, textColor: "#FFFFFF" },
+          }
+        }
+        return section
+      })
+
+      const updatedSlide = { ...slideToUpdate, background, sections: updatedSections }
+      return prevSlides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s))
+    })
+  }
+
+  const addSlide = () => {
+    const newSlide: Slide = {
+      id: Date.now().toString(),
+      sections: [
+        {
+          id: Date.now().toString(),
+          type: "title",
+          content: "NEW SLIDE TITLE",
+          style: { fontSize: "48px" },
+        },
+      ],
+      author: currentSlide.author,
+      background: "white",
+    }
+    setSlides([...slides, newSlide])
+    setCurrentSlideIndex(slides.length)
+  }
+
+  const duplicateSlide = () => {
+    const duplicated: Slide = {
+      ...currentSlide,
+      id: Date.now().toString(),
+      sections: currentSlide.sections.map((s) => ({
+        ...s,
+        id: Date.now().toString() + Math.random(),
+      })),
+    }
+    const newSlides = [...slides]
+    newSlides.splice(currentSlideIndex + 1, 0, duplicated)
+    setSlides(newSlides)
+    setCurrentSlideIndex(currentSlideIndex + 1)
+  }
+
+  const deleteSlide = () => {
+    if (slides.length === 1) return
+    const newSlides = slides.filter((_, i) => i !== currentSlideIndex)
+    setSlides(newSlides)
+    setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1))
+  }
+  
+  const clearSlide = () => {
+    const updatedSlide = {
+      ...currentSlide,
+      sections: currentSlide.sections.filter(s => s.type === 'title'), // Keep only the title
+    };
+    setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)));
+  };
+
+  const exportSlide = async () => {
+    const { default: html2canvas } = await import("html2canvas")
+    const element = document.getElementById("post-canvas")
+    if (!element) return
+
+    const canvas = await html2canvas(element, {
+      backgroundColor: null,
+      scale: 3,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 0,
+      removeContainer: true,
+    })
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const link = document.createElement("a")
+        link.download = `slide-${currentSlideIndex + 1}.png`
+        link.href = URL.createObjectURL(blob)
+        link.click()
+        URL.revokeObjectURL(link.href)
+      }
+    }, "image/png", 1.0)
+  }
+
+  const exportAllAsPDF = async () => {
+    const { default: html2canvas } = await import("html2canvas")
+    const { default: jsPDF } = await import("jspdf")
+    const element = document.getElementById("post-canvas")
+    if (!element) return
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [1080, 1080],
+    })
+
+    for (let i = 0; i < slides.length; i++) {
+      setCurrentSlideIndex(i)
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      const canvas = await html2canvas(element, {
+        backgroundColor: null,
+        scale: 3,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        imageTimeout: 0,
+      })
+
+      const imgData = canvas.toDataURL("image/png", 1.0)
+      if (i > 0) pdf.addPage()
+      pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
+    }
+
+    pdf.save("carousel-post.pdf")
+    setCurrentSlideIndex(0); // Reset to first slide after export
+  }
+
   return (
-    <div className="flex h-screen w-full bg-[#212121] text-zinc-300 font-sans text-sm">
-      {/* Left Sidebar */}
-      <aside className="w-16 flex flex-col items-center justify-between py-4 bg-black/20 border-r border-zinc-800">
-        <div className="flex flex-col items-center gap-4">
-          <Button variant="ghost" size="icon" className="text-white">
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="flex flex-col items-center gap-2">
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Layers className="h-5 w-5" />
+    <TooltipProvider delayDuration={0}>
+      <div className="flex h-screen w-full bg-[#212121] text-zinc-300 font-sans text-sm">
+        {/* Left Sidebar */}
+        <aside className="w-16 flex flex-col items-center justify-between py-4 bg-black/20 border-r border-zinc-800">
+          <div className="flex flex-col items-center gap-4">
+            <Button variant="ghost" size="icon" className="text-white">
+              <Menu className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Box className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Paintbrush className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <FileText className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <LayoutGrid className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Tag className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <MessageSquare className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <LogIn className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <Sun className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <Book className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <MessageCircleQuestion className="h-5 w-5" />
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Header */}
-        <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#212121] z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-green-500 flex items-center justify-center text-black font-bold text-lg">
-              F
+            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+          <div />
+        </aside>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Top Header */}
+          <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#2D2D2D] z-10">
+            <div className="flex items-center gap-4">
+               {/* Slide Navigation */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
+                disabled={currentSlideIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-center">
+                <div className="text-sm font-semibold text-white">
+                  Slide {currentSlideIndex + 1} of {slides.length}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
+                disabled={currentSlideIndex === slides.length - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 text-zinc-400">
               <Clock className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
               <Play className="h-5 w-5" />
-            </Button>
-            <ChevronDown className="h-4 w-4 text-zinc-500" />
-          </div>
-          <div className="flex items-center gap-2">
+            </div>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-4">
+              <Share className="mr-2 h-4 w-4" />
               Share
             </Button>
-          </div>
-        </header>
+          </header>
 
-        {/* Canvas Area */}
-        <main className="flex-1 bg-[#E0E0E0] p-10 relative overflow-auto">
-          <div className="max-w-4xl mx-auto">
-            <div className="border-b border-dashed border-gray-400 pb-2 mb-8">
-              <p className="text-black text-sm">(1) Page</p>
+          {/* Canvas Area */}
+          <main className="flex-1 bg-[#E0E0E0] p-10 relative overflow-auto flex items-center justify-center">
+            <div className="w-full max-w-xl">
+              {currentSlide && (
+                <PostCanvas
+                  slide={currentSlide}
+                  onUpdateSection={updateSection}
+                  onUpdateAuthor={updateAuthor}
+                  onDeleteSection={deleteSection}
+                  onMoveSection={moveSection}
+                />
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-8 items-start">
-              <FloorPlanPlaceholder />
-              <FloorPlanPlaceholder />
-              <FloorPlanPlaceholder className="col-span-2 max-w-[50%] justify-self-center" />
-            </div>
-          </div>
 
-          {/* Bottom Floating Toolbar */}
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white rounded-lg shadow-2xl flex items-center p-1.5 gap-1 border border-zinc-700">
-            <Button variant="ghost" size="icon" className="bg-blue-600/20 text-blue-400">
-              <MousePointer className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <BoxSelect className="h-5 w-5" />
-            </Button>
-            <div className="w-px h-6 bg-zinc-700 mx-1" />
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <PenTool className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <PencilRuler className="h-5 w-5" />
-            </Button>
-            <div className="w-px h-6 bg-zinc-700 mx-1" />
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Spline className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Circle className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Type className="h-5 w-5" />
-            </Button>
-            <div className="w-px h-6 bg-zinc-700 mx-1" />
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Move className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Maximize2 className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Shapes className="h-5 w-5" />
-            </Button>
-            <div className="w-px h-6 bg-zinc-700 mx-1" />
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Copy className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Scissors className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-              <Trash2 className="h-5 w-5" />
-            </Button>
-          </div>
-        </main>
+            {/* Bottom Floating Toolbar */}
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white rounded-lg shadow-2xl flex items-center p-1.5 gap-1 border border-zinc-700">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("label-box")}>
+                    <Tag className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Add Label</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("text-box")}>
+                    <Type className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Add Text Box</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("image")}>
+                    <ImageIcon className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">Add Image</TooltipContent>
+              </Tooltip>
+            </div>
+          </main>
+        </div>
+
+        {/* Right Properties Panel */}
+        <aside className="w-72 p-4 space-y-4 border-l border-zinc-800 bg-[#2D2D2D] text-sm overflow-y-auto">
+          <h2 className="text-lg font-semibold text-white">Post Studio</h2>
+          <Accordion type="multiple" defaultValue={['actions', 'background', 'export']} className="w-full">
+            <AccordionItem value="actions">
+              <AccordionTrigger>Post Actions</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 p-1">
+                  <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Plus className="mr-2 h-4 w-4" /> New Slide
+                  </Button>
+                  <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Copy className="mr-2 h-4 w-4" /> Duplicate Slide
+                  </Button>
+                  <Button onClick={clearSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Eraser className="mr-2 h-4 w-4" /> Clear Slide
+                  </Button>
+                  {slides.length > 1 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full justify-start">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Slide
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete this slide.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={deleteSlide}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="background">
+              <AccordionTrigger>Background Style</AccordionTrigger>
+              <AccordionContent>
+                <div className="p-1">
+                  <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
+                        <SelectItem key={key} value={key}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="export">
+              <AccordionTrigger>Export Options</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 p-1">
+                  <Button onClick={exportSlide} variant="secondary" className="w-full justify-start">
+                    <Download className="mr-2 h-4 w-4" /> Export as PNG
+                  </Button>
+                  <Button onClick={exportAllAsPDF} variant="secondary" className="w-full justify-start">
+                    <Download className="mr-2 h-4 w-4" /> Export All as PDF
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </aside>
       </div>
-
-      {/* Right Properties Panel */}
-      <aside className="w-72 p-4 space-y-4 border-l border-zinc-800 bg-[#2D2D2D] text-sm overflow-y-auto">
-        <Accordion type="multiple" defaultValue={['model', 'canvas']} className="w-full">
-          <AccordionItem value="model">
-            <AccordionTrigger>Model</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-3 p-1">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="model-name">Name</label>
-                  <Input id="model-name" defaultValue="Home Planning" className="w-40" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="model-owner">Owner</label>
-                  <Input id="model-owner" defaultValue="fox" className="w-40" />
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="canvas">
-            <AccordionTrigger>Model Canvas</AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-3 p-1">
-                <div className="flex items-center justify-between">
-                  <label>Name</label>
-                  <Input defaultValue="Top View of Ground floor" className="w-40" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Active layer</label>
-                  <Button variant="outline" className="border-zinc-700 bg-zinc-800 w-40 justify-between h-9">
-                    <span>(1) Page</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Wireframe</label>
-                  <ToggleGroup type="single" defaultValue="off" className="h-9">
-                    <ToggleGroupItem value="on" className="px-3">On</ToggleGroupItem>
-                    <ToggleGroupItem value="off" className="px-3">Off</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Grid</label>
-                  <ToggleGroup type="single" defaultValue="hide" className="h-9">
-                    <ToggleGroupItem value="show" className="px-3">Show</ToggleGroupItem>
-                    <ToggleGroupItem value="hide" className="px-3">Hide</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Unit</label>
-                  <Button variant="outline" className="border-zinc-700 bg-zinc-800 w-40 justify-between h-9">
-                    <span>Feet</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Stroke scale</label>
-                  <Input defaultValue="19/64&quot;" className="w-40" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label>Background</label>
-                  <div className="flex items-center h-9 px-2 rounded-md border border-zinc-700 bg-zinc-800">
-                    <div className="w-5 h-5 bg-[#E0E0E0] rounded-sm border border-zinc-600" />
-                    <span className="ml-2">#E0E0E0</span>
-                  </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="custom">
-            <AccordionTrigger>Custom properties</AccordionTrigger>
-            <AccordionContent>
-              <div className="text-center text-zinc-400 p-4">
-                <p>No properties yet</p>
-                <p className="text-xs">Create properties by clicking on the tag symbol.</p>
-                <Button variant="link" className="text-blue-500 h-auto p-0 mt-2 text-xs">Learn more</Button>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </aside>
-    </div>
+    </TooltipProvider>
   )
 }
