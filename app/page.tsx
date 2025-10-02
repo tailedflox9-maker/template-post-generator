@@ -246,6 +246,20 @@ export default function Home() {
         logging: false,
         useCORS: true,
         allowTaint: false,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.getElementById("post-canvas")
+          if (clonedElement) {
+            // Force compute all styles to RGB
+            const allElements = clonedElement.querySelectorAll("*")
+            allElements.forEach((el) => {
+              const htmlEl = el as HTMLElement
+              const computed = window.getComputedStyle(htmlEl)
+              htmlEl.style.color = computed.color
+              htmlEl.style.backgroundColor = computed.backgroundColor
+              htmlEl.style.borderColor = computed.borderColor
+            })
+          }
+        }
       })
       
       canvas.toBlob((blob) => {
@@ -301,6 +315,20 @@ export default function Home() {
           logging: false,
           useCORS: true,
           allowTaint: false,
+          onclone: (clonedDoc) => {
+            const clonedElement = clonedDoc.getElementById("post-canvas")
+            if (clonedElement) {
+              // Force compute all styles to RGB
+              const allElements = clonedElement.querySelectorAll("*")
+              allElements.forEach((el) => {
+                const htmlEl = el as HTMLElement
+                const computed = window.getComputedStyle(htmlEl)
+                htmlEl.style.color = computed.color
+                htmlEl.style.backgroundColor = computed.backgroundColor
+                htmlEl.style.borderColor = computed.borderColor
+              })
+            }
+          }
         })
         
         const imgData = canvas.toDataURL("image/png", 1.0)
