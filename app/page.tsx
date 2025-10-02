@@ -98,7 +98,6 @@ export default function Home() {
   const [exportError, setExportError] = useState<string | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
 
-  // Load state from local storage on component mount
   useEffect(() => {
     setIsClient(true)
     try {
@@ -117,7 +116,6 @@ export default function Home() {
     }
   }, [])
 
-  // Save state to local storage whenever it changes
   useEffect(() => {
     if (isClient && slides.length > 0) {
       try {
@@ -229,17 +227,46 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const convertColorToRGB = (color: string): string => {
-    // If already RGB, return as is
-    if (color.startsWith('rgb')) return color
+  const convertAllColorsToRGB = (element: HTMLElement) => {
+    const allElements = [element, ...Array.from(element.querySelectorAll("*"))] as HTMLElement[]
     
-    // Create temporary element to compute color
-    const temp = document.createElement('div')
-    temp.style.color = color
-    document.body.appendChild(temp)
-    const computed = window.getComputedStyle(temp).color
-    document.body.removeChild(temp)
-    return computed
+    allElements.forEach((el) => {
+      const computed = window.getComputedStyle(el)
+      
+      // Get all color properties
+      const colorProps = [
+        'color',
+        'backgroundColor',
+        'borderColor',
+        'borderTopColor',
+        'borderRightColor',
+        'borderBottomColor',
+        'borderLeftColor',
+        'outlineColor',
+        'textDecorationColor',
+        'caretColor',
+        'columnRuleColor'
+      ]
+      
+      colorProps.forEach(prop => {
+        const value = computed.getPropertyValue(prop)
+        if (value && value !== 'transparent' && !value.startsWith('rgb')) {
+          // Force set as inline style with rgb value
+          const rgbValue = computed.getPropertyValue(prop)
+          if (rgbValue.includes('oklab') || rgbValue.includes('oklch')) {
+            // Create temp element to compute final RGB value
+            const temp = document.createElement('div')
+            temp.style.setProperty(prop, value)
+            document.body.appendChild(temp)
+            const finalColor = window.getComputedStyle(temp).getPropertyValue(prop)
+            document.body.removeChild(temp)
+            el.style.setProperty(prop, finalColor, 'important')
+          } else {
+            el.style.setProperty(prop, rgbValue, 'important')
+          }
+        }
+      })
+    })
   }
 
   const exportSlide = async () => {
@@ -253,67 +280,22 @@ export default function Home() {
         throw new Error("Canvas element not found")
       }
 
-      const canvasElement = element as HTMLElement
-      
-      // Store original styles and convert all colors to RGB
-      const styleMap = new Map<Element, { 
-        color: string
-        backgroundColor: string
-        borderColor: string
-        borderTopColor: string
-        borderRightColor: string
-        borderBottomColor: string
-        borderLeftColor: string
-        outlineColor: string
-      }>()
-      
-      const allElements = [canvasElement, ...Array.from(canvasElement.querySelectorAll("*"))]
-      
-      allElements.forEach((el) => {
-        const htmlEl = el as HTMLElement
-        const computed = window.getComputedStyle(htmlEl)
-        
-        styleMap.set(el, {
-          color: htmlEl.style.color,
-          backgroundColor: htmlEl.style.backgroundColor,
-          borderColor: htmlEl.style.borderColor,
-          borderTopColor: htmlEl.style.borderTopColor,
-          borderRightColor: htmlEl.style.borderRightColor,
-          borderBottomColor: htmlEl.style.borderBottomColor,
-          borderLeftColor: htmlEl.style.borderLeftColor,
-          outlineColor: htmlEl.style.outlineColor,
-        })
-        
-        // Convert all color properties to RGB
-        if (computed.color && computed.color !== 'transparent') {
-          htmlEl.style.color = convertColorToRGB(computed.color)
-        }
-        if (computed.backgroundColor && computed.backgroundColor !== 'transparent') {
-          htmlEl.style.backgroundColor = convertColorToRGB(computed.backgroundColor)
-        }
-        if (computed.borderColor && computed.borderColor !== 'transparent') {
-          htmlEl.style.borderColor = convertColorToRGB(computed.borderColor)
-        }
-        if (computed.borderTopColor && computed.borderTopColor !== 'transparent') {
-          htmlEl.style.borderTopColor = convertColorToRGB(computed.borderTopColor)
-        }
-        if (computed.borderRightColor && computed.borderRightColor !== 'transparent') {
-          htmlEl.style.borderRightColor = convertColorToRGB(computed.borderRightColor)
-        }
-        if (computed.borderBottomColor && computed.borderBottomColor !== 'transparent') {
-          htmlEl.style.borderBottomColor = convertColorToRGB(computed.borderBottomColor)
-        }
-        if (computed.borderLeftColor && computed.borderLeftColor !== 'transparent') {
-          htmlEl.style.borderLeftColor = convertColorToRGB(computed.borderLeftColor)
-        }
-        if (computed.outlineColor && computed.outlineColor !== 'transparent') {
-          htmlEl.style.outlineColor = convertColorToRGB(computed.outlineColor)
-        }
-      })
+      // Clone the element
+      const clone = element.cloneNode(true) as HTMLElement
+      clone.style.position = 'fixed'
+      clone.style.left = '-9999px'
+      clone.style.top = '-9999px'
+      document.body.appendChild(clone)
 
-      const bgColor = convertColorToRGB(window.getComputedStyle(canvasElement).backgroundColor)
+      // Wait for clone to render
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-      const canvas = await html2canvas(canvasElement, {
+      // Convert all colors in clone
+      convertAllColorsToRGB(clone)
+
+      const bgColor = window.getComputedStyle(clone).backgroundColor
+
+      const canvas = await html2canvas(clone, {
         backgroundColor: bgColor,
         scale: 2,
         logging: false,
@@ -321,21 +303,8 @@ export default function Home() {
         allowTaint: false,
       })
 
-      // Restore original styles
-      allElements.forEach((el) => {
-        const htmlEl = el as HTMLElement
-        const original = styleMap.get(el)
-        if (original) {
-          htmlEl.style.color = original.color
-          htmlEl.style.backgroundColor = original.backgroundColor
-          htmlEl.style.borderColor = original.borderColor
-          htmlEl.style.borderTopColor = original.borderTopColor
-          htmlEl.style.borderRightColor = original.borderRightColor
-          htmlEl.style.borderBottomColor = original.borderBottomColor
-          htmlEl.style.borderLeftColor = original.borderLeftColor
-          htmlEl.style.outlineColor = original.outlineColor
-        }
-      })
+      // Remove clone
+      document.body.removeChild(clone)
       
       canvas.toBlob((blob) => {
         if (blob) {
@@ -372,7 +341,6 @@ export default function Home() {
         throw new Error("Canvas element not found")
       }
 
-      const canvasElement = element as HTMLElement
       const originalIndex = currentSlideIndex
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -385,87 +353,31 @@ export default function Home() {
         setCurrentSlideIndex(i)
         await new Promise(resolve => setTimeout(resolve, 500))
         
-        // Store original styles and convert all colors to RGB
-        const styleMap = new Map<Element, { 
-          color: string
-          backgroundColor: string
-          borderColor: string
-          borderTopColor: string
-          borderRightColor: string
-          borderBottomColor: string
-          borderLeftColor: string
-          outlineColor: string
-        }>()
-        
-        const allElements = [canvasElement, ...Array.from(canvasElement.querySelectorAll("*"))]
-        
-        allElements.forEach((el) => {
-          const htmlEl = el as HTMLElement
-          const computed = window.getComputedStyle(htmlEl)
-          
-          styleMap.set(el, {
-            color: htmlEl.style.color,
-            backgroundColor: htmlEl.style.backgroundColor,
-            borderColor: htmlEl.style.borderColor,
-            borderTopColor: htmlEl.style.borderTopColor,
-            borderRightColor: htmlEl.style.borderRightColor,
-            borderBottomColor: htmlEl.style.borderBottomColor,
-            borderLeftColor: htmlEl.style.borderLeftColor,
-            outlineColor: htmlEl.style.outlineColor,
-          })
-          
-          // Convert all color properties to RGB
-          if (computed.color && computed.color !== 'transparent') {
-            htmlEl.style.color = convertColorToRGB(computed.color)
-          }
-          if (computed.backgroundColor && computed.backgroundColor !== 'transparent') {
-            htmlEl.style.backgroundColor = convertColorToRGB(computed.backgroundColor)
-          }
-          if (computed.borderColor && computed.borderColor !== 'transparent') {
-            htmlEl.style.borderColor = convertColorToRGB(computed.borderColor)
-          }
-          if (computed.borderTopColor && computed.borderTopColor !== 'transparent') {
-            htmlEl.style.borderTopColor = convertColorToRGB(computed.borderTopColor)
-          }
-          if (computed.borderRightColor && computed.borderRightColor !== 'transparent') {
-            htmlEl.style.borderRightColor = convertColorToRGB(computed.borderRightColor)
-          }
-          if (computed.borderBottomColor && computed.borderBottomColor !== 'transparent') {
-            htmlEl.style.borderBottomColor = convertColorToRGB(computed.borderBottomColor)
-          }
-          if (computed.borderLeftColor && computed.borderLeftColor !== 'transparent') {
-            htmlEl.style.borderLeftColor = convertColorToRGB(computed.borderLeftColor)
-          }
-          if (computed.outlineColor && computed.outlineColor !== 'transparent') {
-            htmlEl.style.outlineColor = convertColorToRGB(computed.outlineColor)
-          }
-        })
+        // Clone the element
+        const clone = element.cloneNode(true) as HTMLElement
+        clone.style.position = 'fixed'
+        clone.style.left = '-9999px'
+        clone.style.top = '-9999px'
+        document.body.appendChild(clone)
 
-        const currentBgColor = convertColorToRGB(window.getComputedStyle(canvasElement).backgroundColor)
+        // Wait for clone to render
+        await new Promise(resolve => setTimeout(resolve, 100))
 
-        const capturedCanvas = await html2canvas(canvasElement, {
-          backgroundColor: currentBgColor,
+        // Convert all colors in clone
+        convertAllColorsToRGB(clone)
+
+        const bgColor = window.getComputedStyle(clone).backgroundColor
+
+        const capturedCanvas = await html2canvas(clone, {
+          backgroundColor: bgColor,
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: false,
         })
 
-        // Restore original styles
-        allElements.forEach((el) => {
-          const htmlEl = el as HTMLElement
-          const original = styleMap.get(el)
-          if (original) {
-            htmlEl.style.color = original.color
-            htmlEl.style.backgroundColor = original.backgroundColor
-            htmlEl.style.borderColor = original.borderColor
-            htmlEl.style.borderTopColor = original.borderTopColor
-            htmlEl.style.borderRightColor = original.borderRightColor
-            htmlEl.style.borderBottomColor = original.borderBottomColor
-            htmlEl.style.borderLeftColor = original.borderLeftColor
-            htmlEl.style.outlineColor = original.outlineColor
-          }
-        })
+        // Remove clone
+        document.body.removeChild(clone)
         
         const imgData = capturedCanvas.toDataURL("image/png", 1.0)
         if (i > 0) {
