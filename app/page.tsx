@@ -227,73 +227,24 @@ export default function Home() {
     setSlides(slides.map((s, i) => (i === currentSlideIndex ? updatedSlide : s)))
   }
 
-  const convertUnsupportedColors = (element: HTMLElement) => {
-    const allElements = [element, ...Array.from(element.querySelectorAll("*"))] as HTMLElement[];
-    const colorProps = [
-        'color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor',
-        'borderBottomColor', 'borderLeftColor', 'outlineColor', 'fill', 'stroke'
-    ];
-
-    allElements.forEach(el => {
-        const style = window.getComputedStyle(el);
-        colorProps.forEach(prop => {
-            const value = style.getPropertyValue(prop);
-            if (value && (value.includes('oklab') || value.includes('oklch'))) {
-                const tempEl = document.createElement('div');
-                tempEl.style.color = value;
-                document.body.appendChild(tempEl);
-                const rgbColor = window.getComputedStyle(tempEl).color;
-                document.body.removeChild(tempEl);
-                el.style.setProperty(prop, rgbColor, 'important');
-            }
-        });
-    });
-  };
-
-  const captureCurrentSlide = async (): Promise<string> => {
-    const html2canvas = (await import("html2canvas")).default;
-    const element = document.getElementById("post-canvas");
-    if (!element) {
-      throw new Error("Canvas element not found");
-    }
-
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.style.position = 'fixed';
-    clone.style.left = '-9999px';
-    clone.style.top = '0px';
-    document.body.appendChild(clone);
-    
-    // Remove contenteditable attributes and outlines for a clean capture
-    clone.querySelectorAll('[contenteditable="true"]').forEach(el => {
-      el.removeAttribute('contenteditable');
-      if (el instanceof HTMLElement) el.style.outline = 'none';
-    });
-
-    // Wait for the next frame to ensure styles are applied
-    await new Promise(resolve => requestAnimationFrame(resolve));
-
-    // Convert oklch/oklab colors to RGB
-    convertUnsupportedColors(clone);
-
-    const canvas = await html2canvas(clone, {
-      backgroundColor: null, // Use transparent background
-      scale: 3, // Higher scale for better quality
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    });
-
-    document.body.removeChild(clone);
-    return canvas.toDataURL("image/png", 1.0);
-  }
-
   const exportSlide = async () => {
     setIsExportingPNG(true);
     setExportError(null);
     try {
-      const dataUrl = await captureCurrentSlide();
+      const html2canvas = (await import("html2canvas")).default;
+      const element = document.getElementById("post-canvas");
+      if (!element) throw new Error("Canvas element not found");
+
+      const canvas = await html2canvas(element, {
+        backgroundColor: null,
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      const dataUrl = canvas.toDataURL("image/png", 1.0);
       const link = document.createElement("a");
-      link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`;
+      link.download = `slide-${currentSlideIndex + 1}.png`;
       link.href = dataUrl;
       link.click();
       URL.revokeObjectURL(link.href);
@@ -308,11 +259,15 @@ export default function Home() {
   const exportAllAsPDF = async () => {
     setIsExportingPDF(true);
     setExportError(null);
-    
+    const originalIndex = currentSlideIndex; // Save the original index
+
     try {
+      const html2canvas = (await import("html2canvas")).default;
       const { default: jsPDF } = await import("jspdf");
       
-      const originalIndex = currentSlideIndex;
+      const element = document.getElementById("post-canvas");
+      if (!element) throw new Error("Canvas element not found");
+
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -322,30 +277,29 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i);
-        // Wait for React to re-render and browser to paint
-        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 50))); 
-        
-        const imgData = await captureCurrentSlide();
-        if (i > 0) {
-          pdf.addPage([1080, 1080], "portrait");
-        }
+        await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)));
+
+        const canvas = await html2canvas(element, {
+            backgroundColor: null,
+            scale: 3,
+            useCORS: true,
+            allowTaint: true,
+        });
+
+        const imgData = canvas.toDataURL("image/png", 1.0);
+        if (i > 0) pdf.addPage([1080, 1080], "portrait");
         pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST");
       }
-      
-      pdf.save(`carousel-post-${Date.now()}.pdf`);
-      // Restore original slide index
-      setCurrentSlideIndex(originalIndex);
+
+      pdf.save("carousel-post.pdf");
     } catch (error) {
       console.error("Failed to export PDF:", error);
       setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.");
-      // Restore original slide index even on error
-      const originalIndex = currentSlideIndex;
-      setCurrentSlideIndex(originalIndex);
     } finally {
+      setCurrentSlideIndex(originalIndex); // Restore original slide
       setIsExportingPDF(false);
     }
   };
-
 
   return (
     <TooltipProvider delayDuration={0}>
