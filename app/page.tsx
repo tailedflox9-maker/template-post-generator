@@ -1,7 +1,7 @@
 // FILE: app/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
 import {
@@ -30,6 +30,7 @@ import {
   Eraser,
   Loader2,
   PenSquare,
+  AlertCircle,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -94,6 +95,8 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false)
   const [isExportingPNG, setIsExportingPNG] = useState(false)
   const [isExportingPDF, setIsExportingPDF] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
 
   // Load state from local storage on component mount
   useEffect(() => {
@@ -102,9 +105,9 @@ export default function Home() {
       const savedState = localStorage.getItem("postGeneratorState")
       if (savedState) {
         const { slides: savedSlides, currentSlideIndex: savedIndex } = JSON.parse(savedState)
-        if (savedSlides && typeof savedIndex === 'number') {
+        if (savedSlides && Array.isArray(savedSlides) && savedSlides.length > 0 && typeof savedIndex === 'number') {
           setSlides(savedSlides)
-          setCurrentSlideIndex(savedIndex)
+          setCurrentSlideIndex(Math.min(savedIndex, savedSlides.length - 1))
         }
       }
     } catch (error) {
@@ -116,13 +119,17 @@ export default function Home() {
 
   // Save state to local storage whenever it changes
   useEffect(() => {
-    if (isClient) {
-      const stateToSave = JSON.stringify({ slides, currentSlideIndex })
-      localStorage.setItem("postGeneratorState", stateToSave)
+    if (isClient && slides.length > 0) {
+      try {
+        const stateToSave = JSON.stringify({ slides, currentSlideIndex })
+        localStorage.setItem("postGeneratorState", stateToSave)
+      } catch (error) {
+        console.error("Failed to save state to local storage", error)
+      }
     }
   }, [slides, currentSlideIndex, isClient])
 
-  const currentSlide = slides[currentSlideIndex]
+  const currentSlide = slides[currentSlideIndex] || slides[0]
 
   const updateSection = (sectionId: string, content: string) => {
     const updatedSlide = {
@@ -224,27 +231,50 @@ export default function Home() {
 
   const exportSlide = async () => {
     setIsExportingPNG(true)
+    setExportError(null)
+    
     try {
-      const { default: html2canvas } = await import("html2canvas")
+      // Import html2canvas dynamically
+      const html2canvas = (await import("html2canvas")).default
+      
+      // Find the canvas element
       const element = document.getElementById("post-canvas")
-      if (!element) return
+      if (!element) {
+        throw new Error("Canvas element not found")
+      }
+
+      // Wait a moment for any pending updates
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Create canvas with specific options
       const canvas = await html2canvas(element, {
         backgroundColor: null,
         scale: 3,
+        logging: false,
         useCORS: true,
         allowTaint: true,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
       })
+      
+      // Convert to blob and download
       canvas.toBlob((blob) => {
         if (blob) {
+          const url = URL.createObjectURL(blob)
           const link = document.createElement("a")
-          link.download = `slide-${currentSlideIndex + 1}.png`
-          link.href = URL.createObjectURL(blob)
+          link.download = `slide-${currentSlideIndex + 1}-${Date.now()}.png`
+          link.href = url
+          document.body.appendChild(link)
           link.click()
-          URL.revokeObjectURL(link.href)
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        } else {
+          throw new Error("Failed to create image blob")
         }
       }, "image/png", 1.0)
     } catch (error) {
       console.error("Failed to export PNG:", error)
+      setExportError(error instanceof Error ? error.message : "Failed to export PNG. Please try again.")
     } finally {
       setIsExportingPNG(false)
     }
@@ -252,32 +282,63 @@ export default function Home() {
 
   const exportAllAsPDF = async () => {
     setIsExportingPDF(true)
+    setExportError(null)
+    
     try {
-      const { default: html2canvas } = await import("html2canvas")
-      const { default: jsPDF } = await import("jspdf")
+      // Import dependencies
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf")
+      ])
+      
       const element = document.getElementById("post-canvas")
-      if (!element) return
+      if (!element) {
+        throw new Error("Canvas element not found")
+      }
 
+      // Save original index
       const originalIndex = currentSlideIndex
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [1080, 1080] })
+      
+      // Create PDF with square format
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [1080, 1080]
+      })
 
+      // Export each slide
       for (let i = 0; i < slides.length; i++) {
+        // Update slide index and wait for render
         setCurrentSlideIndex(i)
-        await new Promise((resolve) => setTimeout(resolve, 400))
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Capture the slide
         const canvas = await html2canvas(element, {
           backgroundColor: null,
           scale: 3,
+          logging: false,
           useCORS: true,
           allowTaint: true,
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight,
         })
+        
+        // Add to PDF
         const imgData = canvas.toDataURL("image/png", 1.0)
-        if (i > 0) pdf.addPage([1080, 1080], "portrait")
+        if (i > 0) {
+          pdf.addPage([1080, 1080], "portrait")
+        }
         pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
       }
-      pdf.save("carousel-post.pdf")
+      
+      // Save PDF
+      pdf.save(`carousel-post-${Date.now()}.pdf`)
+      
+      // Restore original slide
       setCurrentSlideIndex(originalIndex)
     } catch (error) {
       console.error("Failed to export PDF:", error)
+      setExportError(error instanceof Error ? error.message : "Failed to export PDF. Please try again.")
     } finally {
       setIsExportingPDF(false)
     }
@@ -295,34 +356,64 @@ export default function Home() {
         <div className="flex-1 flex flex-col">
           <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#2D2D2D] z-10">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))} disabled={currentSlideIndex === 0}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))} 
+                disabled={currentSlideIndex === 0}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="text-sm font-semibold text-white">Slide {currentSlideIndex + 1} of {slides.length}</div>
-              <Button variant="ghost" size="icon" onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))} disabled={currentSlideIndex === slides.length - 1}>
+              <div className="text-sm font-semibold text-white">
+                Slide {currentSlideIndex + 1} of {slides.length}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))} 
+                disabled={currentSlideIndex === slides.length - 1}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </header>
 
           <main className="flex-1 bg-[#E0E0E0] p-10 relative overflow-auto flex items-center justify-center">
-            <div className="w-full max-w-xl">
+            <div className="w-full max-w-xl" ref={canvasRef}>
               {currentSlide && (
-                <PostCanvas slide={currentSlide} onUpdateSection={updateSection} onUpdateAuthor={updateAuthor} onDeleteSection={deleteSection} onMoveSection={moveSection} />
+                <PostCanvas 
+                  slide={currentSlide} 
+                  onUpdateSection={updateSection} 
+                  onUpdateAuthor={updateAuthor} 
+                  onDeleteSection={deleteSection} 
+                  onMoveSection={moveSection} 
+                />
               )}
             </div>
 
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white rounded-lg shadow-2xl flex items-center p-1.5 gap-1 border border-zinc-700">
               <Tooltip>
-                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("label-box")}><Tag className="h-5 w-5" /></Button></TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("label-box")}>
+                    <Tag className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
                 <TooltipContent side="top">Add Label</TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("text-box")}><Type className="h-5 w-5" /></Button></TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("text-box")}>
+                    <Type className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
                 <TooltipContent side="top">Add Text Box</TooltipContent>
               </Tooltip>
               <Tooltip>
-                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("image")}><ImageIcon className="h-5 w-5" /></Button></TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="hover:bg-zinc-700" onClick={() => addSection("image")}>
+                    <ImageIcon className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
                 <TooltipContent side="top">Add Image</TooltipContent>
               </Tooltip>
             </div>
@@ -331,34 +422,105 @@ export default function Home() {
 
         <aside className="w-72 p-4 space-y-4 border-l border-zinc-800 bg-[#2D2D2D] text-sm overflow-y-auto">
           <h2 className="text-lg font-semibold text-white">Post Studio</h2>
+          
+          {exportError && (
+            <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-red-300">{exportError}</div>
+            </div>
+          )}
+
           <Accordion type="multiple" defaultValue={['actions', 'background', 'export']} className="w-full">
             <AccordionItem value="actions">
               <AccordionTrigger>Post Actions</AccordionTrigger>
-              <AccordionContent><div className="space-y-2 p-1">
-                  <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start"><Plus className="mr-2 h-4 w-4" /> New Slide</Button>
-                  <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start"><Copy className="mr-2 h-4 w-4" /> Duplicate Slide</Button>
-                  <Button onClick={clearSlide} variant="outline" size="sm" className="w-full justify-start"><Eraser className="mr-2 h-4 w-4" /> Clear Slide</Button>
-                  {slides.length > 1 && (<AlertDialog><AlertDialogTrigger asChild><Button variant="destructive" size="sm" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4" /> Delete Slide</Button></AlertDialogTrigger><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete this slide.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteSlide}>Continue</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>)}
-              </div></AccordionContent>
+              <AccordionContent>
+                <div className="space-y-2 p-1">
+                  <Button onClick={addSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Plus className="mr-2 h-4 w-4" /> New Slide
+                  </Button>
+                  <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Copy className="mr-2 h-4 w-4" /> Duplicate Slide
+                  </Button>
+                  <Button onClick={clearSlide} variant="outline" size="sm" className="w-full justify-start">
+                    <Eraser className="mr-2 h-4 w-4" /> Clear Slide
+                  </Button>
+                  {slides.length > 1 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full justify-start">
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Slide
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete this slide.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={deleteSlide}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </AccordionContent>
             </AccordionItem>
+
             <AccordionItem value="background">
               <AccordionTrigger>Background Style</AccordionTrigger>
-              <AccordionContent><div className="p-1">
-                <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(BACKGROUNDS).map(([key, { name }]) => (<SelectItem key={key} value={key}>{name}</SelectItem>))}</SelectContent></Select>
-              </div></AccordionContent>
+              <AccordionContent>
+                <div className="p-1">
+                  <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
+                        <SelectItem key={key} value={key}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </AccordionContent>
             </AccordionItem>
+
             <AccordionItem value="export">
               <AccordionTrigger>Export Options</AccordionTrigger>
-              <AccordionContent><div className="space-y-2 p-1">
-                  <Button onClick={exportSlide} variant="secondary" className="w-full justify-start" disabled={isExportingPNG || isExportingPDF}>
-                    {isExportingPNG ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isExportingPNG ? "Exporting..." : "Export as PNG"}
+              <AccordionContent>
+                <div className="space-y-2 p-1">
+                  <Button 
+                    onClick={exportSlide} 
+                    variant="secondary" 
+                    className="w-full justify-start" 
+                    disabled={isExportingPNG || isExportingPDF}
+                  >
+                    {isExportingPNG ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {isExportingPNG ? "Exporting..." : "Export Current as PNG"}
                   </Button>
-                  <Button onClick={exportAllAsPDF} variant="secondary" className="w-full justify-start" disabled={isExportingPDF || isExportingPNG}>
-                    {isExportingPDF ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isExportingPDF ? "Exporting..." : "Export All as PDF"}
+                  <Button 
+                    onClick={exportAllAsPDF} 
+                    variant="secondary" 
+                    className="w-full justify-start" 
+                    disabled={isExportingPDF || isExportingPNG}
+                  >
+                    {isExportingPDF ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {isExportingPDF ? "Creating PDF..." : "Export All as PDF"}
                   </Button>
-              </div></AccordionContent>
+                </div>
+              </AccordionContent>
             </AccordionItem>
           </Accordion>
         </aside>
