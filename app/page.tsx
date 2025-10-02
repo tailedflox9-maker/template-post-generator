@@ -1,13 +1,25 @@
+// FILE: app/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
 import { useTheme } from "next-themes"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Download, ImageIcon, Copy, Trash2, Sparkles } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Download,
+  ImageIcon,
+  Copy,
+  Trash2,
+  Sparkles,
+  Type,
+  Tag,
+} from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Separator } from "@/components/ui/separator"
 
 export interface Section {
   id: string
@@ -34,7 +46,7 @@ const BACKGROUNDS = {
   darkBlue: { name: "Dark Blue", value: "#1e3a8a", isDark: true },
   white: { name: "Clean White", value: "#ffffff", isDark: false },
   cream: { name: "Warm Cream", value: "#fef9f3", isDark: false },
-  lightGray: { name: "Light Gray", value: "#f5f5f5", isDark: false },
+  lightGray: { name: "Light Gray", value: "#f3f4f6", isDark: false },
   grainy: { name: "Grainy Texture", value: "#f8f8f8", isDark: false },
   dots: { name: "Subtle Dots", value: "#fafafa", isDark: false },
 }
@@ -285,131 +297,60 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <div className="w-80 border-r border-border bg-card p-6">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">Post Studio</h1>
-                <p className="text-xs text-muted-foreground">Create stunning posts</p>
-              </div>
-            </div>
-            <ThemeToggle />
-          </div>
-
-          {/* Background Selector */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">Background Style</label>
-            <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
-                  <SelectItem key={key} value={key}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Add Elements */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">Add Elements</label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => addSection("label-box")} variant="outline" size="sm" className="w-full justify-start">
-                <Plus className="mr-2 h-4 w-4" />
-                Label
-              </Button>
-              <Button onClick={() => addSection("text-box")} variant="outline" size="sm" className="w-full justify-start">
-                <Plus className="mr-2 h-4 w-4" />
-                Text
-              </Button>
-              <Button onClick={() => addSection("image")} variant="outline" size="sm" className="w-full col-span-2 justify-start">
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Image
-              </Button>
-            </div>
-          </div>
-
-          {/* Slide Controls */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">Slide Actions</label>
-            <div className="space-y-2">
-              <Button onClick={addSlide} variant="default" size="sm" className="w-full justify-start">
-                <Plus className="mr-2 h-4 w-4" />
-                New Slide
-              </Button>
-              <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full justify-start">
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate Slide
-              </Button>
-              {slides.length > 1 && (
-                <Button onClick={deleteSlide} variant="outline" size="sm" className="w-full justify-start text-destructive hover:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Slide
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Export */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">Export</label>
-            <div className="space-y-2">
-              <Button onClick={exportSlide} className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export PNG
-              </Button>
-              <Button onClick={exportAllAsPDF} variant="secondary" className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export All as PDF
-              </Button>
-            </div>
-          </div>
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Left Toolbar */}
+      <aside className="w-16 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col items-center py-4 space-y-6">
+        <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
+          <Sparkles className="w-5 h-5 text-white" />
         </div>
-      </div>
+        <div className="flex flex-col items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => addSection("label-box")} title="Add Label">
+            <Tag className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => addSection("text-box")} title="Add Text Box">
+            <Type className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => addSection("image")} title="Add Image">
+            <ImageIcon className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="mt-auto">
+          <ThemeToggle />
+        </div>
+      </aside>
 
-      {/* Main Canvas Area */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Top Navigation */}
-        <div className="border-b border-border bg-card px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
-                disabled={currentSlideIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-center">
-                <div className="text-sm font-medium text-foreground">
-                  Slide {currentSlideIndex + 1} of {slides.length}
-                </div>
-                <div className="text-xs text-muted-foreground">Click any text to edit</div>
+        {/* Top Bar with Slide Navigation */}
+        <header className="h-16 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 flex items-center justify-center px-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
+              disabled={currentSlideIndex === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center">
+              <div className="text-sm font-semibold">
+                Slide {currentSlideIndex + 1} of {slides.length}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
-                disabled={currentSlideIndex === slides.length - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <div className="text-xs text-muted-foreground">Click any text to edit</div>
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
+              disabled={currentSlideIndex === slides.length - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-        </div>
+        </header>
 
         {/* Canvas */}
-        <div className="flex-1 flex items-center justify-center p-8">
+        <main className="flex-1 flex items-center justify-center p-8 overflow-auto">
           <div className="w-full max-w-2xl">
             {currentSlide && (
               <PostCanvas
@@ -421,8 +362,63 @@ export default function Home() {
               />
             )}
           </div>
-        </div>
+        </main>
       </div>
+
+      {/* Right Inspector Panel */}
+      <aside className="w-80 bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800 p-6 flex flex-col gap-8">
+        <div>
+          <h2 className="text-lg font-semibold">Post Studio</h2>
+          <p className="text-sm text-muted-foreground">Create stunning posts</p>
+        </div>
+        
+        <Separator />
+        
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Background Style</h3>
+          <Select value={currentSlide?.background || "white"} onValueChange={updateBackground}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(BACKGROUNDS).map(([key, { name }]) => (
+                <SelectItem key={key} value={key}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Actions</h3>
+          <div className="space-y-2">
+            <Button onClick={addSlide} variant="outline" size="sm" className="w-full">
+              <Plus className="mr-2 h-4 w-4" /> New Slide
+            </Button>
+            <Button onClick={duplicateSlide} variant="outline" size="sm" className="w-full">
+              <Copy className="mr-2 h-4 w-4" /> Duplicate Slide
+            </Button>
+            {slides.length > 1 && (
+              <Button onClick={deleteSlide} variant="destructive" size="sm" className="w-full">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Slide
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-auto space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Export</h3>
+          <div className="space-y-2">
+            <Button onClick={exportSlide} className="w-full">
+              <Download className="mr-2 h-4 w-4" /> Export as PNG
+            </Button>
+            <Button onClick={exportAllAsPDF} variant="secondary" className="w-full">
+              <Download className="mr-2 h-4 w-4" /> Export All as PDF
+            </Button>
+          </div>
+        </div>
+      </aside>
     </div>
   )
 }
