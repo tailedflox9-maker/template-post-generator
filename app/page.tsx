@@ -240,25 +240,40 @@ export default function Home() {
         throw new Error("Canvas element not found")
       }
 
+      // Store original styles
+      const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
+      const allElements = element.querySelectorAll("*")
+      
+      allElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        const computed = window.getComputedStyle(htmlEl)
+        styleMap.set(el, {
+          color: htmlEl.style.color,
+          backgroundColor: htmlEl.style.backgroundColor,
+          borderColor: htmlEl.style.borderColor
+        })
+        // Apply computed RGB values
+        htmlEl.style.color = computed.color
+        htmlEl.style.backgroundColor = computed.backgroundColor
+        htmlEl.style.borderColor = computed.borderColor
+      })
+
       const canvas = await html2canvas(element, {
         backgroundColor: null,
         scale: 2,
         logging: false,
         useCORS: true,
         allowTaint: false,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById("post-canvas")
-          if (clonedElement) {
-            // Force compute all styles to RGB
-            const allElements = clonedElement.querySelectorAll("*")
-            allElements.forEach((el) => {
-              const htmlEl = el as HTMLElement
-              const computed = window.getComputedStyle(htmlEl)
-              htmlEl.style.color = computed.color
-              htmlEl.style.backgroundColor = computed.backgroundColor
-              htmlEl.style.borderColor = computed.borderColor
-            })
-          }
+      })
+
+      // Restore original styles
+      allElements.forEach((el) => {
+        const htmlEl = el as HTMLElement
+        const original = styleMap.get(el)
+        if (original) {
+          htmlEl.style.color = original.color
+          htmlEl.style.backgroundColor = original.backgroundColor
+          htmlEl.style.borderColor = original.borderColor
         }
       })
       
@@ -309,25 +324,40 @@ export default function Home() {
         setCurrentSlideIndex(i)
         await new Promise(resolve => setTimeout(resolve, 300))
         
+        // Store original styles
+        const styleMap = new Map<Element, { color: string; backgroundColor: string; borderColor: string }>()
+        const allElements = element.querySelectorAll("*")
+        
+        allElements.forEach((el) => {
+          const htmlEl = el as HTMLElement
+          const computed = window.getComputedStyle(htmlEl)
+          styleMap.set(el, {
+            color: htmlEl.style.color,
+            backgroundColor: htmlEl.style.backgroundColor,
+            borderColor: htmlEl.style.borderColor
+          })
+          // Apply computed RGB values
+          htmlEl.style.color = computed.color
+          htmlEl.style.backgroundColor = computed.backgroundColor
+          htmlEl.style.borderColor = computed.borderColor
+        })
+
         const canvas = await html2canvas(element, {
           backgroundColor: null,
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: false,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.getElementById("post-canvas")
-            if (clonedElement) {
-              // Force compute all styles to RGB
-              const allElements = clonedElement.querySelectorAll("*")
-              allElements.forEach((el) => {
-                const htmlEl = el as HTMLElement
-                const computed = window.getComputedStyle(htmlEl)
-                htmlEl.style.color = computed.color
-                htmlEl.style.backgroundColor = computed.backgroundColor
-                htmlEl.style.borderColor = computed.borderColor
-              })
-            }
+        })
+
+        // Restore original styles
+        allElements.forEach((el) => {
+          const htmlEl = el as HTMLElement
+          const original = styleMap.get(el)
+          if (original) {
+            htmlEl.style.color = original.color
+            htmlEl.style.backgroundColor = original.backgroundColor
+            htmlEl.style.borderColor = original.borderColor
           }
         })
         
