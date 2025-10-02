@@ -1,6 +1,5 @@
 // FILE: app/page.tsx
 "use client"
-
 import { useState, useEffect, useRef } from "react"
 import { PostCanvas } from "@/components/post-canvas"
 import { Button } from "@/components/ui/button"
@@ -232,23 +231,17 @@ export default function Home() {
   const exportSlide = async () => {
     setIsExportingPNG(true)
     setExportError(null)
-    
     try {
-      // Import html2canvas dynamically
       const html2canvas = (await import("html2canvas")).default
-      
-      // Find the canvas element
       const element = document.getElementById("post-canvas")
-      if (!element) {
-        throw new Error("Canvas element not found")
-      }
+      if (!element) throw new Error("Canvas element not found")
 
-      // Wait a moment for any pending updates
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      // Create canvas with specific options
+      // Force simple background color
+      const bgColor = BACKGROUNDS[currentSlide.background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
+      element.classList.add('export-mode')
+
       const canvas = await html2canvas(element, {
-        backgroundColor: null,
+        backgroundColor: bgColor,
         scale: 3,
         logging: false,
         useCORS: true,
@@ -256,8 +249,9 @@ export default function Home() {
         windowWidth: element.scrollWidth,
         windowHeight: element.scrollHeight,
       })
-      
-      // Convert to blob and download
+
+      element.classList.remove('export-mode')
+
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob)
@@ -268,8 +262,6 @@ export default function Home() {
           link.click()
           document.body.removeChild(link)
           URL.revokeObjectURL(url)
-        } else {
-          throw new Error("Failed to create image blob")
         }
       }, "image/png", 1.0)
     } catch (error) {
@@ -283,38 +275,30 @@ export default function Home() {
   const exportAllAsPDF = async () => {
     setIsExportingPDF(true)
     setExportError(null)
-    
     try {
-      // Import dependencies
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import("html2canvas"),
         import("jspdf")
       ])
-      
       const element = document.getElementById("post-canvas")
-      if (!element) {
-        throw new Error("Canvas element not found")
-      }
+      if (!element) throw new Error("Canvas element not found")
 
-      // Save original index
       const originalIndex = currentSlideIndex
-      
-      // Create PDF with square format
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
         format: [1080, 1080]
       })
 
-      // Export each slide
       for (let i = 0; i < slides.length; i++) {
-        // Update slide index and wait for render
         setCurrentSlideIndex(i)
         await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Capture the slide
+
+        const bgColor = BACKGROUNDS[slides[i].background as keyof typeof BACKGROUNDS]?.value || "#ffffff"
+        element.classList.add('export-mode')
+
         const canvas = await html2canvas(element, {
-          backgroundColor: null,
+          backgroundColor: bgColor,
           scale: 3,
           logging: false,
           useCORS: true,
@@ -322,19 +306,15 @@ export default function Home() {
           windowWidth: element.scrollWidth,
           windowHeight: element.scrollHeight,
         })
-        
-        // Add to PDF
+
+        element.classList.remove('export-mode')
+
         const imgData = canvas.toDataURL("image/png", 1.0)
-        if (i > 0) {
-          pdf.addPage([1080, 1080], "portrait")
-        }
+        if (i > 0) pdf.addPage([1080, 1080], "portrait")
         pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080)
       }
-      
-      // Save PDF
+
       pdf.save(`carousel-post-${Date.now()}.pdf`)
-      
-      // Restore original slide
       setCurrentSlideIndex(originalIndex)
     } catch (error) {
       console.error("Failed to export PDF:", error)
@@ -352,14 +332,13 @@ export default function Home() {
             <PenSquare className="w-5 h-5 text-zinc-300" />
           </div>
         </aside>
-
         <div className="flex-1 flex flex-col">
           <header className="h-12 flex items-center justify-between px-4 border-b border-zinc-800 bg-[#2D2D2D] z-10">
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))} 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))}
                 disabled={currentSlideIndex === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -367,30 +346,28 @@ export default function Home() {
               <div className="text-sm font-semibold text-white">
                 Slide {currentSlideIndex + 1} of {slides.length}
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))} 
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))}
                 disabled={currentSlideIndex === slides.length - 1}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </header>
-
           <main className="flex-1 bg-[#E0E0E0] p-10 relative overflow-auto flex items-center justify-center">
             <div className="w-full max-w-xl" ref={canvasRef}>
               {currentSlide && (
-                <PostCanvas 
-                  slide={currentSlide} 
-                  onUpdateSection={updateSection} 
-                  onUpdateAuthor={updateAuthor} 
-                  onDeleteSection={deleteSection} 
-                  onMoveSection={moveSection} 
+                <PostCanvas
+                  slide={currentSlide}
+                  onUpdateSection={updateSection}
+                  onUpdateAuthor={updateAuthor}
+                  onDeleteSection={deleteSection}
+                  onMoveSection={moveSection}
                 />
               )}
             </div>
-
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white rounded-lg shadow-2xl flex items-center p-1.5 gap-1 border border-zinc-700">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -419,17 +396,15 @@ export default function Home() {
             </div>
           </main>
         </div>
-
         <aside className="w-72 p-4 space-y-4 border-l border-zinc-800 bg-[#2D2D2D] text-sm overflow-y-auto">
           <h2 className="text-lg font-semibold text-white">Post Studio</h2>
-          
+
           {exportError && (
             <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="text-xs text-red-300">{exportError}</div>
             </div>
           )}
-
           <Accordion type="multiple" defaultValue={['actions', 'background', 'export']} className="w-full">
             <AccordionItem value="actions">
               <AccordionTrigger>Post Actions</AccordionTrigger>
@@ -468,7 +443,6 @@ export default function Home() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-
             <AccordionItem value="background">
               <AccordionTrigger>Background Style</AccordionTrigger>
               <AccordionContent>
@@ -488,15 +462,14 @@ export default function Home() {
                 </div>
               </AccordionContent>
             </AccordionItem>
-
             <AccordionItem value="export">
               <AccordionTrigger>Export Options</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-2 p-1">
-                  <Button 
-                    onClick={exportSlide} 
-                    variant="secondary" 
-                    className="w-full justify-start" 
+                  <Button
+                    onClick={exportSlide}
+                    variant="secondary"
+                    className="w-full justify-start"
                     disabled={isExportingPNG || isExportingPDF}
                   >
                     {isExportingPNG ? (
@@ -506,10 +479,10 @@ export default function Home() {
                     )}
                     {isExportingPNG ? "Exporting..." : "Export Current as PNG"}
                   </Button>
-                  <Button 
-                    onClick={exportAllAsPDF} 
-                    variant="secondary" 
-                    className="w-full justify-start" 
+                  <Button
+                    onClick={exportAllAsPDF}
+                    variant="secondary"
+                    className="w-full justify-start"
                     disabled={isExportingPDF || isExportingPNG}
                   >
                     {isExportingPDF ? (
