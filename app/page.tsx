@@ -239,7 +239,19 @@ export default function Home() {
     }
 
     try {
-      const dataUrl = await domtoimage.toPng(element, { quality: 1.0, scale: 2 });
+      // Wait a moment for any pending renders
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      const dataUrl = await domtoimage.toPng(element, { 
+        quality: 1.0, 
+        scale: 2,
+        cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        }
+      });
+      
       const link = document.createElement("a");
       link.download = `slide-${currentSlideIndex + 1}.png`;
       link.href = dataUrl;
@@ -265,7 +277,7 @@ export default function Home() {
     }
 
     try {
-      const { default: jsPDF } = (await import("jspdf"));
+      const { default: jsPDF } = await import("jspdf");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
@@ -275,9 +287,18 @@ export default function Home() {
 
       for (let i = 0; i < slides.length; i++) {
         setCurrentSlideIndex(i);
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Longer wait time to ensure slide is fully rendered
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-        const imgData = await domtoimage.toPng(element, { quality: 1.0, scale: 2 });
+        const imgData = await domtoimage.toPng(element, { 
+          quality: 1.0, 
+          scale: 2,
+          cacheBust: true,
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left'
+          }
+        });
         
         if (i > 0) pdf.addPage([1080, 1080], "portrait");
         pdf.addImage(imgData, "PNG", 0, 0, 1080, 1080, undefined, "FAST");
